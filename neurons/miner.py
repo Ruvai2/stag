@@ -26,7 +26,11 @@ import template
 
 # import base miner class which takes care of most of the boilerplate
 from template.base.miner import BaseMinerNeuron
-
+from miner_tools import miner_tools, BASE_URL
+from utils.request import request_handler_get
+from tools.open_ai import open_ai_main
+from tools.interpreter_agent import interpreter_tool
+from tools.interpreter_agent import self_operating_computer
 
 class Miner(BaseMinerNeuron):
     """
@@ -37,10 +41,17 @@ class Miner(BaseMinerNeuron):
     This class provides reasonable default behavior for a miner such as blacklisting unrecognized hotkeys, prioritizing requests based on stake, and forwarding requests to the forward function. If you need to define custom
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, axon=None, wallet=None, subtensor=None):
         super(Miner, self).__init__(config=config)
 
         # TODO(developer): Anything specific to your use case you can do here
+        self.axon = axon or bt.axon(wallet=self.wallet, port=self.config.axon.port)
+        self.dendrite = bt.dendrite(wallet=self.wallet)
+        self.axon.attach(
+            forward_fn=self.validator_request
+        )
+        bt.logging.info(f"Axon created: {self.axon}")
+
 
     async def forward(
         self, synapse: template.protocol.Dummy
@@ -140,6 +151,41 @@ class Miner(BaseMinerNeuron):
         return prirority
 
 
+    def validator_request(self, synapse: template.protocol.InterpreterRequest):
+        if synapse.status:
+            return self.isAlive(synapse.minerId)
+        else:    
+            return self.main(synapse)
+        
+    def isAlive(self, synapse: template.protocol.Alive):
+        try:
+            portId = miner_tools[synapse.minerId]
+            URL = BASE_URL + str(portId) + '/api/alive'
+            check_tool_status = request_handler_get(URL)
+            print(":::::::::::check_tool_status::::::::::::::", check_tool_status)
+            return synapse.check_tool_status
+        except Exception as e: 
+            print('Something went wrong in isAlive method', e) 
+    
+
+    def main(synapse):
+        if synapse.minerId == '1001':
+            interpreter_tool(synapse.query)
+        elif synapse.minerId == '1002':
+            return open_ai_main(synapse.query)
+        elif synapse.minerId == '1003':
+            return self_operating_computer(synapse.query, synapse.summary)
+    
+    # async def query_miners(self, query, miner_details):
+    #     responses = [] 
+    #     responses = self.dendrite.query(
+    #         # Send the query to miners in the network.
+    #         axons=[self.neuron.metagraph.axons[id] for id in miner_details],
+    #         synapse=QueryMiner(query),
+    #         # All responses have the deserialize function called on them before returning.
+    #         deserialize=True,
+    #     ) 
+    
 # This is the main function, which runs the miner.
 if __name__ == "__main__":
     with Miner() as miner:

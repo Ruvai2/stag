@@ -21,7 +21,9 @@ import typing
 import bittensor as bt
 
 # TODO(developer): Rewrite with your protocol definition.
-
+import pydantic
+from typing import Optional
+from pydantic import BaseModel 
 # This is the protocol for the dummy miner and validator.
 # It is a simple request-response protocol where the validator sends a request
 # to the miner, and the miner responds with a dummy response.
@@ -74,3 +76,24 @@ class Dummy(bt.Synapse):
         5
         """
         return self.dummy_output
+    
+class Alive(bt.Synapse):
+    modelId : str
+        
+class InterpreterRequest(bt.Synapse):
+    query: str = pydantic.Field(
+        ..., title="Query", description="The query to pass to the provider"
+    )
+    model: str = pydantic.Field(
+        ..., title="Model", description="The model to use"
+    )
+    # This is only used with self-operating-computer as an optional field
+    summary: Optional[bool]= pydantic.Field(
+        ..., title="Summary", description="Whether to generate a summary or not", value = False
+    )
+    status:  Optional[bool]= pydantic.Field(
+        ..., title="status", description="Whether to generate a summary or not", value = False
+    )
+    minerId:  Optional[str]= pydantic.Field(
+        ..., title="minerId", description="Whether to generate a summary or not", value = False
+    )
