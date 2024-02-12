@@ -45,8 +45,15 @@ class Validator(BaseValidatorNeuron):
 
         bt.logging.info("load_state()")
         self.load_state()
+        self.agent_ids = [1000,1001]
 
         # TODO(developer): Anything specific to your use case you can do here
+
+    def generate_query(self, problem_statement):
+        query = {
+            "problem_statement": problem_statement
+        }  # Replace with actual query generation logic
+        return query
 
     async def forward(self):
         """
@@ -57,6 +64,15 @@ class Validator(BaseValidatorNeuron):
         - Rewarding the miners
         - Updating the scores
         """
+        problem_statement = "Create a calculator program in python."  # Replace with your actual problem statement
+        query = self.generate_query(problem_statement)
+        miner_details = self.fetch_agents_details(self.agent_ids)
+        responses = await self.query_miners(query, miner_details)
+
+        # self.process_responses(responses, problem_statement)
+        # self.update_scores(responses)
+        # rewards = self.calculate_rewards(responses)
+        # self.reward_miners(rewards)
         # TODO(developer): Rewrite this function based on your protocol definition.
         return await forward(self)
 

@@ -57,6 +57,9 @@ class Dummy(bt.Synapse):
     # Optional request output, filled by recieving axon.
     dummy_output: typing.Optional[int] = None
 
+    
+
+
     def deserialize(self) -> int:
         """
         Deserialize the dummy output. This method retrieves the response from
@@ -74,3 +77,15 @@ class Dummy(bt.Synapse):
         5
         """
         return self.dummy_output
+
+class QueryMiner(bt.Synapse):
+    """
+    A simple query protocol representation which uses bt.Synapse as its base.
+    This protocol helps in handling query request and response communication between
+    the miner and the validator.
+
+    Attributes:
+    - query: An string value representing the input request sent by the validator.
+    """
+    # Required request input, filled by sending dendrite caller.
+    query: str
