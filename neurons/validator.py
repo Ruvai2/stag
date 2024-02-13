@@ -29,6 +29,7 @@ from template.validator import forward
 
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
+from template.protocol import QueryMiner, CheckMinerStatus
 
 
 class Validator(BaseValidatorNeuron):
@@ -45,7 +46,72 @@ class Validator(BaseValidatorNeuron):
 
         bt.logging.info("load_state()")
         self.load_state()
+        self.model = "gpt-4"
         self.agent_ids = [1000,1001]
+        self.miners = [
+            {
+                "name": "Planner",
+                "id": 1000,
+                "uuid": "597ccbc9-3126-4a10-8225-bed862f7fc79",
+                "status": "ACTIVE",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "instructions": """You are a python project planner who when given a Input you will
+    - First Read and understand the request to see if its relevant to python execution
+    - Understand the request data and create a plan for the developer
+    - If its not related to plan anything just say "Null" or give a reply "Null" 
+    - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
+    - If you fully satisfied with the previous response, then just say "End_Conversation" """,
+                "model": self.model,
+                "type": "AGENT",
+                "assistant_id": "asst_QvpejJxdxTXoGlNF9wPeRIs2",
+                "thread_id": "thread_g85L4ptn2DmxL1WHVT59vAB3",
+                "current_thread_ids": [],
+                "graph_details": [],
+                "response_score_list": [],
+            },
+            {
+                "name": "Developer",
+                "id": 1001,
+                "uuid": "ee6f2afc-590f-4f03-bbd5-c86ff52c8cd6",
+                "status": "ACTIVE",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "instructions": """You are a python developer who when given a Input you will.
+    - First Read and understand the request to see if its relevant to python execution.
+    - You'll not execute anything if there is no plan or clear instruction to write and provide a code.
+    - If its not related to python or code execution just say "Null" or give a reply "Null" 
+    - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
+    - If you fully satisfied with the previous response, then just say "End_Conversation" """,
+                "name": "Developer",
+                "model": self.model,
+                "type": "AGENT",
+                "assistant_id": "asst_cCCxeo7wgoy8dqJVa0pgrJx9",
+                "thread_id": "thread_ecimSSij0p2UkfnExpTE5lyC",
+                "current_thread_ids": [],
+                "graph_details": [],
+                "response_score_list": [],
+            },
+            {
+                "name": "Tester",
+                "id": 1002,
+                "uuid": "06e89677-2c5b-4b61-bf54-4cd3a9c432d4",
+                "status": "ACTIVE",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "instructions": """You are a python tester who when given a Input you will
+    - First Read and understand the request to see if its relevant to python execution
+    - Understand the python code and plan to test the code
+    - You try to compile the code by understanding and provide any errors in the code
+    - If its not related to test the python code just say "Null" or give a reply "Null" 
+    - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
+    - If you fully satisfied with the previous response, then just say "End_Conversation" """,
+                "model": self.model,
+                "type": "AGENT",
+                "assistant_id": "asst_iBxCOCkfLUsYSGEgTPMQxQSG",
+                "thread_id": "thread_lUep0mQKbOw3ra2LgzCylQtz",
+                "current_thread_ids": [],
+                "graph_details": [],
+                "response_score_list": [],
+            },
+        ]
 
         # TODO(developer): Anything specific to your use case you can do here
 
@@ -54,6 +120,47 @@ class Validator(BaseValidatorNeuron):
             "problem_statement": problem_statement
         }  # Replace with actual query generation logic
         return query
+    async def fetch_agents_details(self, agent_ids):
+        print("fetch_agents_details::::::agent_ids", agent_ids)
+        result_agents = []
+        for agent_id in agent_ids:
+            for agent_detail in self.miners:
+                if agent_detail.get("id") == agent_id:
+                    result_agents.append(agent_detail)
+                    break
+        return result_agents
+
+    async def query_miners(self, query, miner_details):
+        responses = []
+        for miner in miner_details:
+            # Check if the miner is active by sending a request to the miner.
+            check_response = self.dendrite.query(
+                axons=[self.neuron.metagraph.axons[miner["id"]]],
+                synapse=CheckMinerStatus(status=True),
+                deserialize=True,
+            )
+            is_active = check_response[0].get("active", False)
+            if is_active:
+                # Miner is active, send the query.
+                response = self.dendrite.query(
+                    axons=[self.neuron.metagraph.axons[miner["id"]]],
+                    synapse=QueryMiner(query, status=True),
+                    deserialize=True,
+                )
+                responses.extend(response)
+
+        return responses
+
+    def process_responses(self, responses, problem_statement):
+        # Incorporate the problem_statement and miner responses to generate a score
+        for response in responses:
+            score = self.generate_score(problem_statement, response)
+            # Handle the score as needed
+
+    def generate_score(self, problem_statement, response):
+        # Your logic for generating a score based on problem_statement and miner response goes here
+        score = 0  # Replace with actual score generation logic
+        return score
 
     async def forward(self):
         """
