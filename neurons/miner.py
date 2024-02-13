@@ -20,6 +20,7 @@
 import time
 import typing
 import bittensor as bt
+import requests
 
 # Bittensor Miner Template:
 import template
@@ -45,22 +46,48 @@ class Miner(BaseMinerNeuron):
     async def forward(
         self, synapse: template.protocol.Dummy
     ) -> template.protocol.Dummy:
-        """
-        Processes the incoming 'Dummy' synapse by performing a predefined operation on the input data.
-        This method should be replaced with actual logic relevant to the miner's purpose.
+        try:
+            """
+            Processes the incoming 'Dummy' synapse by performing a predefined operation on the input data.
+            This method should be replaced with actual logic relevant to the miner's purpose.
 
-        Args:
-            synapse (template.protocol.Dummy): The synapse object containing the 'dummy_input' data.
+            Args:
+                synapse (template.protocol.Dummy): The synapse object containing the 'dummy_input' data.
 
-        Returns:
-            template.protocol.Dummy: The synapse object with the 'dummy_output' field set to twice the 'dummy_input' value.
+            Returns:
+                template.protocol.Dummy: The synapse object with the 'dummy_output' field set to twice the 'dummy_input' value.
 
-        The 'forward' function is a placeholder and should be overridden with logic that is appropriate for
-        the miner's intended operation. This method demonstrates a basic transformation of input data.
-        """
-        # TODO(developer): Replace with actual implementation logic.
-        synapse.dummy_output = synapse.dummy_input * 2
-        return synapse
+            The 'forward' function is a placeholder and should be overridden with logic that is appropriate for
+            the miner's intended operation. This method demonstrates a basic transformation of input data.
+            """
+            # TODO(developer): Replace with actual implementation logic.
+            api_url = "https://api.openai.com/v1/chat/completions"
+            api_key = "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"
+            headers = {"Authorization": f"Bearer {api_key}",
+                       "Content-Type": "application/json", }
+            payload = {
+                "model": "gpt-3.5-turbo",
+                "messages": [
+                    {"role": "system", "content": """You are a python project planner who when given a Input you will
+                    - First Read and understand the request to see if its relevant to python execution
+                    - Understand the request data and create a plan for the developer
+                    - If its not related to plan anything just say "Null" or give a reply "Null" 
+                    - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
+                    - If you fully satisfied with the previous response, then just say "End_Conversation" """},
+                    {"role": "user", "content": synapse.dummy_input},
+                ],
+            }
+            response = requests.post(api_url, headers=headers, json=payload)
+            if response.status_code == 200:
+                synapse.dummy_output = response.json(
+                )["choices"][0]["message"]["content"]
+            else:
+                # Handle errors, you might want to log or raise an exception
+                print(f"Error: {response.status_code}, {response.text}")
+
+            return synapse
+        except Exception as e:
+            print(f"Error: {e}")
 
     async def blacklist(
         self, synapse: template.protocol.Dummy
