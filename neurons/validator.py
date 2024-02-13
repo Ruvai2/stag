@@ -23,12 +23,17 @@ import time
 # Bittensor
 import bittensor as bt
 
+from aiohttp import web
+import asyncio
+
 # Bittensor Validator Template:
 import template
 from template.validator import forward
 
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
+
+
 
 
 class Validator(BaseValidatorNeuron):
@@ -43,12 +48,13 @@ class Validator(BaseValidatorNeuron):
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
 
-        bt.logging.info("load_state()")
+        bt.logging.info("=====================================> load_state()")
+        bt.logging.info(f":::::::self.axon::::::", self.axon)
         self.load_state()
 
         # TODO(developer): Anything specific to your use case you can do here
-
-    async def forward(self):
+    
+    async def forward(self, response):
         """
         Validator forward pass. Consists of:
         - Generating the query
@@ -58,12 +64,48 @@ class Validator(BaseValidatorNeuron):
         - Updating the scores
         """
         # TODO(developer): Rewrite this function based on your protocol definition.
+
+        # craete a synapse query
+        # bt.logging.info("Creating synapse query", self.step)
+        # synapse = template.protocol.Dummy(dummy_input=self.step)
+        
+        bt.logging.info("Creating synapse query", response)
+        self.query = response['query']
         return await forward(self)
+    
+async def get_query(request: web.Request):
+        """
+        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+        """
+        response = await request.json()
+        
+        bt.logging.info(f"Received query request. {response}")
+        return web.json_response(await webapp.validator.forward(response))
+    
+class WebApp(web.Application):
+    """
+    Web application for the validator. This class is used to create a web server for the validator.
+    """
+
+    def __init__(self, validator: Validator):
+        super().__init__()
+        self.validator = validator
+        # self.router.add_get("/", self.index)
+        
+    # async def index(self, request):
+    #     """
+    #     Index request handler. This method handles the incoming requests and returns a simple message.
+    #     """
+    #     return web.Response(text="Bittensor Validator")
+    
+webapp = WebApp(Validator())
+webapp.router.add_post("/forward", get_query)
+web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
 
 
 # The main function parses the configuration and runs the validator.
-if __name__ == "__main__":
-    with Validator() as validator:
-        while True:
-            bt.logging.info("Validator running...", time.time())
-            time.sleep(5)
+# if __name__ == "__main__":
+#     with Validator() as validator:
+#         while True:
+#             bt.logging.info("Validator running...", time.time())
+#             time.sleep(5)

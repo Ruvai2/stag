@@ -46,7 +46,7 @@ async def forward(self):
         # axons=[self.metagraph.axons[uid] for uid in miner_uids],
         axons=[self.metagraph.axons[6]],
         # Construct a dummy query. This simply contains a single integer.
-        synapse=Dummy(dummy_input=self.problem_statement),
+        synapse=Dummy(dummy_input=self.query),
         # All responses have the deserialize function called on them before returning.
         # You are encouraged to define your own deserialization function.
         deserialize=True,
