@@ -39,7 +39,7 @@ async def forward(self):
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
 
     # The dendrite client queries the network.
-    print("_______")
+    print("_______self.query: ", self.query)
     self.problem_statement = "Create a program of Addition in python."
     responses = self.dendrite.query(
         # Send the query to selected miner axons in the network.
