@@ -89,3 +89,16 @@ class QueryMiner(bt.Synapse):
     """
     # Required request input, filled by sending dendrite caller.
     query: str
+    status:bool = False
+
+class CheckMinerStatus(bt.Synapse):
+    """
+    A simple query protocol representation which uses bt.Synapse as its base.
+    This protocol helps in handling query request and response communication between
+    the miner and the validator.
+
+    Attributes:
+    - query: An string value representing the input request sent by the validator.
+    """
+    # Required request input, filled by sending dendrite caller.
+    status:bool = True

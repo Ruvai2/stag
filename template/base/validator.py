@@ -26,7 +26,7 @@ import bittensor as bt
 
 from typing import List
 from traceback import print_exception
-from template.protocol import QueryMiner
+from template.protocol import QueryMiner, CheckMinerStatus
 from template.base.neuron import BaseNeuron
 
 
@@ -417,14 +417,24 @@ class BaseValidatorNeuron(BaseNeuron):
         return result_agents
 
     async def query_miners(self, query, miner_details):
-        responses = [] 
-        responses = self.dendrite.query(
-            # Send the query to miners in the network.
-            axons=[self.neuron.metagraph.axons[id] for id in miner_details],
-            synapse=QueryMiner(query),
-            # All responses have the deserialize function called on them before returning.
-            deserialize=True,
-        )
+        responses = []
+        for miner in miner_details:
+            # Check if the miner is active by sending a request to the miner.
+            check_response = self.dendrite.query(
+                axons=[self.neuron.metagraph.axons[miner["id"]]],
+                synapse=CheckMinerStatus(status=True),
+                deserialize=True,
+            )
+            is_active = check_response[0].get("active", False)
+            if is_active:
+                # Miner is active, send the query.
+                response = self.dendrite.query(
+                    axons=[self.neuron.metagraph.axons[miner["id"]]],
+                    synapse=QueryMiner(query, status=True),
+                    deserialize=True,
+                )
+                responses.extend(response)
+
         return responses
 
     def process_responses(self, responses, problem_statement):
