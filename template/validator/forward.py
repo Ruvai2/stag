@@ -18,7 +18,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 import bittensor as bt
-
+import aiohttp
 from template.protocol import Dummy
 from template.validator.reward import get_rewards
 # from template.utils.uids import get_random_uids
@@ -41,17 +41,30 @@ async def forward(self):
     # The dendrite client queries the network.
     print("_______self.query: ", self.query, self.agent)
     self.problem_statement = "Create a program of Addition in python."
+    print("____________________FORWARD_METHOD____________")
+    print("::::self.agent:::::",self.agent)
     responses = self.dendrite.query(
         # Send the query to selected miner axons in the network.
         # axons=[self.metagraph.axons[uid] for uid in miner_uids],
-        axons=[self.metagraph.axons[self.agent]],
+        axons=[self.metagraph.axons[self.agent["uid"]]],
         # Construct a dummy query. This simply contains a single integer.
-        synapse=Dummy(dummy_input=self.query),
+        synapse=Dummy(dummy_input={"query":self.query, "agent":self.agent}),
         # All responses have the deserialize function called on them before returning.
         # You are encouraged to define your own deserialization function.
         deserialize=True,
     )
-    print(":::::::::::responses:::::::::",responses)
+    print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses[0])
+    print(" :::::::::::RESPONSE::::FORWARD::::::::::::",type(responses))
+    res_string  = responses[0]
+    if res_string == None:  res_string = "NULL"
+    async with aiohttp.ClientSession() as session:
+                        async with session.post("http://localhost:8000/api/send_update_after_processing",headers = { "Content-Type": "application/json"}, json={"key" : res_string}) as response:
+                            if response.status == 200:
+                                print("Successfully called the group chat:::::")
+                            else:
+                                # Handle errors, you might want to log or raise an exception
+                                print(f"Error: {response.status}, {await response.text()}")
+                                print("Failed to called the group chat:::::")
     # Log the results for monitoring purposes.
     bt.logging.info(f"Received responses: {responses}")
 
@@ -61,4 +74,4 @@ async def forward(self):
 
     bt.logging.info(f"Scored responses: {rewards}")
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
-    self.update_scores(rewards, self.agent)
+    self.update_scores(rewards, self.agent["uid"])

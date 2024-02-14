@@ -52,7 +52,7 @@ class Dummy(bt.Synapse):
     """
 
     # Required request input, filled by sending dendrite caller.
-    dummy_input: str
+    dummy_input: object
 
     # Optional request output, filled by recieving axon.
     dummy_output: typing.Optional[str] = None

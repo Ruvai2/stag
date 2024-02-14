@@ -73,7 +73,9 @@ class Validator(BaseValidatorNeuron):
         self.query = response['query']
         self.agent = response['agent']
         bt.logging.info("synapse query: ", self.query)
-        return await forward(self)
+        bt.logging.info("synapse self.agent: ",self.agent)
+        forwardRes = await forward(self)
+        return forwardRes
     
 async def get_query(request: web.Request):
         """
