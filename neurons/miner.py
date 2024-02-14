@@ -62,7 +62,7 @@ class Miner(BaseMinerNeuron):
             """
             # TODO(developer): Replace with actual implementation logic.
             api_url = "https://api.openai.com/v1/chat/completions"
-            api_key = "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"
+            api_key = "APIKEY"
             headers = {"Authorization": f"Bearer {api_key}",
                        "Content-Type": "application/json", }
             payload = {
