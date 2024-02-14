@@ -71,6 +71,7 @@ class Validator(BaseValidatorNeuron):
         
         bt.logging.info("Creating synapse query", response)
         self.query = response['query']
+        self.agent = response['agent']
         bt.logging.info("synapse query: ", self.query)
         return await forward(self)
     
@@ -79,8 +80,9 @@ async def get_query(request: web.Request):
         Get query request handler. This method handles the incoming requests and returns the response from the forward function.
         """
         response = await request.json()
-        
+        print(":::::response:::::",response)
         bt.logging.info(f"Received query request. {response}")
+        # print(":::web.json_response(await webapp.validator.forward(response)):::",web.json_response(await webapp.validator.forward(response)))
         return web.json_response(await webapp.validator.forward(response))
     
 class WebApp(web.Application):
@@ -93,5 +95,13 @@ class WebApp(web.Application):
         self.validator = validator
     
 webapp = WebApp(Validator())
-webapp.add_routes([web.post('/forward', get_query)])
-web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
+webapp.router.add_post("/forward", get_query)
+web.run_app(webapp, port=8080, loop=asyncio.get_event_loop(),shutdown_timeout=30.0)
+
+
+# The main function parses the configuration and runs the validator.
+# if __name__ == "__main__":
+#     with Validator() as validator:
+#         while True:
+#             bt.logging.info("Validator running...", time.time())
+#             time.sleep(5)

@@ -61,12 +61,13 @@ class Miner(BaseMinerNeuron):
             the miner's intended operation. This method demonstrates a basic transformation of input data.
             """
             # TODO(developer): Replace with actual implementation logic.
+            print('synapse in miner: ', synapse, synapse.dummy_input)
+            print(":::::::: synapse.dummy_input::::::", synapse.dummy_input)
+            open_api_key = "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"
             api_url = "https://api.openai.com/v1/chat/completions"
-            api_key = "APIKEY"
-            headers = {"Authorization": f"Bearer {api_key}",
-                       "Content-Type": "application/json", }
+            headers = { "Content-Type": "application/json","Authorization": f"Bearer {open_api_key}", }
             payload = {
-                "model": "gpt-4",
+                "model" : "gpt-3.5-turbo",
                 "messages": [
                     {"role": "system", "content": """You are a python project planner who when given a Input you will
                     - First Read and understand the request to see if its relevant to python execution

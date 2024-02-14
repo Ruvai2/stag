@@ -39,12 +39,12 @@ async def forward(self):
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
 
     # The dendrite client queries the network.
-    print("_______self.query: ", self.query)
+    print("_______self.query: ", self.query, self.agent)
     self.problem_statement = "Create a program of Addition in python."
     responses = self.dendrite.query(
         # Send the query to selected miner axons in the network.
         # axons=[self.metagraph.axons[uid] for uid in miner_uids],
-        axons=[self.metagraph.axons[2]],
+        axons=[self.metagraph.axons[self.agent]],
         # Construct a dummy query. This simply contains a single integer.
         synapse=Dummy(dummy_input=self.query),
         # All responses have the deserialize function called on them before returning.
@@ -61,4 +61,4 @@ async def forward(self):
 
     bt.logging.info(f"Scored responses: {rewards}")
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
-    self.update_scores(rewards, 2)
+    self.update_scores(rewards, self.agent)
