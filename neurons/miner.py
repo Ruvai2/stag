@@ -71,19 +71,19 @@ class Miner(BaseMinerNeuron):
             the miner's intended operation. This method demonstrates a basic transformation of input data.
             """
             print(":::::::::::::::::synapse::::::::::::::::", synapse)
-            interpreter_tool_response = self.interprter_agent_request(self,synapse)
+            interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['minerId']})
             print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
             return synapse
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
 
     def interprter_agent_request(self, synapse):
-            if synapse.status:
-                return self.isAlive(synapse.minerId)
+            if synapse['status']:
+                return self.isAlive(synapse['minerId'])
             else:    
-                return self.main(synapse.minerId, synapse.query, synapse.summary)
+                return self.main(synapse['minerId'], synapse['query'])
 
-    def isAlive(minerId):
+    def isAlive(self,minerId):
         try:
             portId = miner_tools[minerId]
             URL = BASE_URL + str(portId) + '/api/alive'
@@ -95,7 +95,8 @@ class Miner(BaseMinerNeuron):
             print('Something went wrong in isAlive method', e) 
     # print(check_tool_status['alive'])
 
-    def main(model, query, summary=False):
+    def main(self, model, query, summary=False):
+        print("::::::::MODEL::::::::::::", model)
         if model == '1001':
             print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
             interpreter_tool(query)

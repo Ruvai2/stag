@@ -59,9 +59,18 @@ class InterpreterRequests(bt.Synapse):
 
     # Optional request output, filled by recieving axon.
     # dummy_output: typing.Optional[str] = None
-    query: str
-    status:bool
-    minerId:str
+    query:dict = pydantic.Field(
+        default={},
+        title="Pipeline Parameters",
+        description="Additional generating params",
+    )
+    # status:bool
+    # minerId:str
+
+    def deserialize(self) -> "InterpreterRequests":
+        return self
+
+    
     # query: str = pydantic.Field(
     # ..., title="Query", description="The query to pass to the provider"
     # )

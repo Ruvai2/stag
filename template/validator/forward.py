@@ -43,18 +43,19 @@ async def forward(self):
 
     # The dendrite client queries the network.
     print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
+    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
     self.problem_statement = "Create a program of Addition in python."
     try:
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[11]],
-            synapse=InterpreterRequests(query=self.query['query'], status=self.query['status'], minerId=self.query['minerId']),
-            deserialize=False,
+            axons=[self.metagraph.axons[7]],
+            synapse=InterpreterRequests(query=self.query),
+            deserialize=True,
         )
     except Exception as e:
         print(":::::Error while sending dendrite:::::::",e)
-    print(":::::::::::responses:::::::::",responses)
+    # print(":::::::::::responses:::::::::",responses)
     # Log the results for monitoring purposes.
-    bt.logging.info(f"Received responses: {responses}")
+    # bt.logging.info(f"Received responses: {responses}")
 
     # TODO(developer): Define how the validator scores responses.
     # Adjust the scores based on responses from miners.

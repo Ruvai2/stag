@@ -93,7 +93,7 @@ def driver(message):
     best_solution.append({'marks':planner2_result['result'], 'name': 'planner2'})
     best_solution.append({'marks':planner3_result['result'], 'name': 'planner3'})
     max_data = max(best_solution, key=lambda x: x['marks'])
-    webhook_url = 'http://127.0.0.1:3001/api/webhook'
+    webhook_url = 'http://0.0.0.0:9080/webhook'
     
     if max_data['name'] == 'planner1':
         check = check_content(planner1_response['result'])
@@ -125,3 +125,8 @@ def driver(message):
             request_handler(webhook_url, data_to_send)
             return
         request_handler(INTERPRETER_URL, {"key": planner3_response['result']})
+
+
+@app.get("/api/alive")
+def check_alive_status():
+    return {"alive": True}
