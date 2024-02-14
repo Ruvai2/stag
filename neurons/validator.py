@@ -70,9 +70,10 @@ class Validator(BaseValidatorNeuron):
         # synapse = template.protocol.Dummy(dummy_input=self.step)
         
         bt.logging.info("Creating synapse query", response)
-        self.query = response['query']
+        self.query = response
         bt.logging.info("synapse query: ", self.query)
-        return await forward(self)
+        query_response = await forward(self)
+        return query_response
     
 async def get_query(request: web.Request):
         """
@@ -94,4 +95,4 @@ class WebApp(web.Application):
     
 webapp = WebApp(Validator())
 webapp.add_routes([web.post('/forward', get_query)])
-web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
+web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())
