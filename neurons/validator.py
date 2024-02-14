@@ -91,22 +91,7 @@ class WebApp(web.Application):
     def __init__(self, validator: Validator):
         super().__init__()
         self.validator = validator
-        # self.router.add_get("/", self.index)
-        
-    # async def index(self, request):
-    #     """
-    #     Index request handler. This method handles the incoming requests and returns a simple message.
-    #     """
-    #     return web.Response(text="Bittensor Validator")
     
 webapp = WebApp(Validator())
-webapp.router.add_post("/forward", get_query)
+webapp.add_routes([web.post('/forward', get_query)])
 web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
-
-
-# The main function parses the configuration and runs the validator.
-# if __name__ == "__main__":
-#     with Validator() as validator:
-#         while True:
-#             bt.logging.info("Validator running...", time.time())
-#             time.sleep(5)

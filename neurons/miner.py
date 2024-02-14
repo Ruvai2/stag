@@ -61,9 +61,10 @@ class Miner(BaseMinerNeuron):
             the miner's intended operation. This method demonstrates a basic transformation of input data.
             """
             # TODO(developer): Replace with actual implementation logic.
-            print('synapse in miner: ', synapse, synapse.dummy_input)
-            api_url = "https://openai.ru9.workers.dev/v1/chat/completions"
-            headers = { "Content-Type": "application/json" }
+            api_url = "https://api.openai.com/v1/chat/completions"
+            api_key = "APIKEY"
+            headers = {"Authorization": f"Bearer {api_key}",
+                       "Content-Type": "application/json", }
             payload = {
                 "model": "gpt-4",
                 "messages": [
@@ -75,10 +76,11 @@ class Miner(BaseMinerNeuron):
                     - If you fully satisfied with the previous response, then just say "End_Conversation" """},
                     {"role": "user", "content": synapse.dummy_input},
                 ],
-                "stream": False
             }
             bt.logging.info('Payload for GPT: ', payload)
+            bt.logging.info(f"Synapse: {synapse}")
             response = requests.post(api_url, headers=headers, json=payload)
+            bt.logging.info(f"Response: {response.json()}")
             if response.status_code == 200:
                 synapse.dummy_output = response.json(
                 )["choices"][0]["message"]["content"]
