@@ -20,7 +20,7 @@
 import time
 import typing
 import bittensor as bt
-import requests
+import aiohttp
 
 # Bittensor Miner Template:
 import template
@@ -62,7 +62,7 @@ class Miner(BaseMinerNeuron):
             """
             # TODO(developer): Replace with actual implementation logic.
             api_url = "https://api.openai.com/v1/chat/completions"
-            api_key = "APIKEY"
+            api_key = "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"
             headers = {"Authorization": f"Bearer {api_key}",
                        "Content-Type": "application/json", }
             payload = {
@@ -79,14 +79,13 @@ class Miner(BaseMinerNeuron):
             }
             bt.logging.info('Payload for GPT: ', payload)
             bt.logging.info(f"Synapse: {synapse}")
-            response = requests.post(api_url, headers=headers, json=payload)
-            bt.logging.info(f"Response: {response.json()}")
-            if response.status_code == 200:
-                synapse.dummy_output = response.json(
-                )["choices"][0]["message"]["content"]
-            else:
-                # Handle errors, you might want to log or raise an exception
-                print(f"Error: {response.status_code}, {response.text}")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(api_url, headers=headers, json=payload) as response:
+                    if response.status == 200:
+                        synapse.dummy_output = (await response.json())["choices"][0]["message"]["content"]
+                    else:
+                        # Handle errors, you might want to log or raise an exception
+                        print(f"Error: {response.status}, {await response.text()}")
 
             return synapse
         except Exception as e:
