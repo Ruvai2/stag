@@ -28,8 +28,7 @@ import template
 from template.base.miner import BaseMinerNeuron
 from miner_tools import miner_tools, BASE_URL
 from utils.request import request_handler_get
-from tools.open_ai import open_ai_main
-from tools.interpreter_agent import interpreter_tool
+from tools.interpreter_agent import interpreter_tool, gpt_agent
 from tools.interpreter_agent import self_operating_computer
 
 class Miner(BaseMinerNeuron):
@@ -172,7 +171,7 @@ class Miner(BaseMinerNeuron):
         if synapse.minerId == '1001':
             interpreter_tool(synapse.query)
         elif synapse.minerId == '1002':
-            return open_ai_main(synapse.query)
+            return gpt_agent(synapse.query)
         elif synapse.minerId == '1003':
             return self_operating_computer(synapse.query, synapse.summary)
     
