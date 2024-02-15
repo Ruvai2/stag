@@ -73,9 +73,8 @@ class Validator(BaseValidatorNeuron):
         self.query = response['query']
         self.agent = response['agent']
         bt.logging.info("synapse query: ", self.query)
-        bt.logging.info("synapse self.agent: ",self.agent)
-        forwardRes = await forward(self)
-        return forwardRes
+        query_response = await forward(self)
+        return query_response
     
 async def get_query(request: web.Request):
         """
@@ -96,14 +95,15 @@ class WebApp(web.Application):
         super().__init__()
         self.validator = validator
     
+async def miner_response(request: web.Request):
+        """
+        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+        """
+        response = await request.json()
+        
+        bt.logging.info(f"Received query request. {response}")
+        # return web.json_response(await webapp.validator.forward(response))
+
 webapp = WebApp(Validator())
-webapp.router.add_post("/forward", get_query)
-web.run_app(webapp, port=8080, loop=asyncio.get_event_loop(),shutdown_timeout=30.0)
-
-
-# The main function parses the configuration and runs the validator.
-# if __name__ == "__main__":
-#     with Validator() as validator:
-#         while True:
-#             bt.logging.info("Validator running...", time.time())
-#             time.sleep(5)
+webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response)])
+web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())

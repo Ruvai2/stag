@@ -1,0 +1,12 @@
+services:
+  server:
+    container_name: interpreter-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+    ports:
+      - 8000:8000
+    command: uvicorn main:app  --host 0.0.0.0 --reload
+    #user: "appuser"

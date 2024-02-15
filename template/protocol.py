@@ -19,6 +19,9 @@
 
 import typing
 import bittensor as bt
+import pydantic
+from typing import Optional
+from pydantic import BaseModel
 
 # TODO(developer): Rewrite with your protocol definition.
 
@@ -40,7 +43,7 @@ import bittensor as bt
 #   assert dummy_output == 2
 
 
-class Dummy(bt.Synapse):
+class InterpreterRequests(bt.Synapse):
     """
     A simple dummy protocol representation which uses bt.Synapse as its base.
     This protocol helps in handling dummy request and response communication between
@@ -52,25 +55,92 @@ class Dummy(bt.Synapse):
     """
 
     # Required request input, filled by sending dendrite caller.
-    dummy_input: object
+    # dummy_input: str
 
     # Optional request output, filled by recieving axon.
-    dummy_output: typing.Optional[str] = None
+    # dummy_output: typing.Optional[str] = None
+    query:dict = pydantic.Field(
+        default={},
+        title="Pipeline Parameters",
+        description="Additional generating params",
+    )
+    # status:bool
+    # minerId:str
 
-    def deserialize(self) -> str:
-        """
-        Deserialize the dummy output. This method retrieves the response from
-        the miner in the form of dummy_output, deserializes it and returns it
-        as the output of the dendrite.query() call.
+    def deserialize(self) -> "InterpreterRequests":
+        return self
 
-        Returns:
-        - int: The deserialized response, which in this case is the value of dummy_output.
+    
+    # query: str = pydantic.Field(
+    # ..., title="Query", description="The query to pass to the provider"
+    # )
+    # model: str = pydantic.Field(
+    #     ..., title="Model", description="The model to use"
+    # )
+    # This is only used with self-operating-computer as an optional field
+    # summary: Optional[bool]= pydantic.Field(
+    #     ..., title="Summary", description="Whether to generate a summary or not", value = False
+    # )
+    # status:  Optional[bool]= pydantic.Field(
+    #     ..., title="status", description="Whether to generate a summary or not", value = False
+    # )
+    # minerId:  Optional[str]= pydantic.Field(
+    #     ..., title="minerId", description="Whether to generate a summary or not", value = False
+    # )
+    # def deserialize(self) -> str:
+    #     """
+    #     Deserialize the dummy output. This method retrieves the response from
+    #     the miner in the form of dummy_output, deserializes it and returns it
+    #     as the output of the dendrite.query() call.
 
-        Example:
-        Assuming a Dummy instance has a dummy_output value of 5:
-        >>> dummy_instance = Dummy(dummy_input=4)
-        >>> dummy_instance.dummy_output = 5
-        >>> dummy_instance.deserialize()
-        5
-        """
-        return self.dummy_output
+    #     Returns:
+    #     - int: The deserialized response, which in this case is the value of dummy_output.
+
+    #     Example:
+    #     Assuming a Dummy instance has a dummy_output value of 5:
+    #     >>> dummy_instance = Dummy(dummy_input=4)
+    #     >>> dummy_instance.dummy_output = 5
+    #     >>> dummy_instance.deserialize()
+    #     5
+    #     """
+    #     return self.dummy_output
+
+# class InterpreterRequests(bt.Synapse):
+#     # completion: Optional[str] = pydantic.Field(
+#     #     None,
+#     #     title="Completion",
+#     #     description="The completion data of the chat response."
+#     # ),
+#     query: str = pydantic.Field(
+#     ..., title="Query", description="The query to pass to the provider"
+#     )
+#     # model: str = pydantic.Field(
+#     #     ..., title="Model", description="The model to use"
+#     # )
+#     # This is only used with self-operating-computer as an optional field
+#     # summary: Optional[bool]= pydantic.Field(
+#     #     ..., title="Summary", description="Whether to generate a summary or not", value = False
+#     # )
+#     status:  Optional[bool]= pydantic.Field(
+#         ..., title="status", description="Whether to generate a summary or not", value = False
+#     )
+#     minerId:  Optional[str]= pydantic.Field(
+#         ..., title="minerId", description="Whether to generate a summary or not", value = False
+#     )
+#     # def deserialize(self) -> str:
+#     #     # """
+#     #     # Deserialize the dummy output. This method retrieves the response from
+#     #     # the miner in the form of dummy_output, deserializes it and returns it
+#     #     # as the output of the dendrite.query() call.
+
+#     #     # Returns:
+#     #     # - int: The deserialized response, which in this case is the value of dummy_output.
+
+#     #     # Example:
+#     #     # Assuming a Dummy instance has a dummy_output value of 5:
+#     #     # >>> dummy_instance = Dummy(dummy_input=4)
+#     #     # >>> dummy_instance.dummy_output = 5
+#     #     # >>> dummy_instance.deserialize()
+#     #     # 5
+#     #     # """
+#     #     return self.completion
