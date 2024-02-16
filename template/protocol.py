@@ -58,7 +58,11 @@ class InterpreterRequests(bt.Synapse):
     # dummy_input: str
 
     # Optional request output, filled by recieving axon.
-    agent_output: typing.Optional[str] = None
+    agent_output: dict = pydantic.Field(
+        default={},
+        title="Agent Output",
+        description="The output of the agent",
+    )
     query:dict = pydantic.Field(
         default={},
         title="Pipeline Parameters",

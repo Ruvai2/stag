@@ -33,9 +33,10 @@ from tools.interpreter_agent import interpreter_tool
 # from tools.interpreter_agent import self_operating_computer
 
 miner_tools = {
-        1001: 8000,
-        1002 : 3000 
+        "1001": 8000,
+        "1002" : 3000 
     }
+
 BASE_URL = "http://127.0.0.1:"    
 
 class Miner(BaseMinerNeuron):
@@ -56,14 +57,16 @@ class Miner(BaseMinerNeuron):
         self, synapse: template.protocol.InterpreterRequests
     ):
         try:
-            print(":::::::inside the miner:::::::::::")
-            print(":::::::::::::::::synapse::::::::::::::::", synapse)
-            # synapse.dummy_output = "Hello"
-            # query={'query': 'Create a calcultator program in python', 'agent': {'uid': 6, 'tool': 1001}}
-            # return synapse
-            interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['agent']['tool']})
-            print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
-            synapse.agent_output = interpreter_tool_response['alive']
+            # print(":::::::inside the miner:::::::::::")
+            # print(":::::::::::::::::synapse::::::::::::::::", synapse)
+            if synapse.query['request_type'] == "CHECK_TOOL_ALIVE":
+                interpreter_tool_response = self.interprter_agent_request({"status": synapse.query['status'], "toolId": synapse.query['toolId'], "minerId": synapse.query['minerId']})
+                synapse.agent_output = interpreter_tool_response
+            elif synapse.query['request_type'] == "PING_MINER":
+                synapse.agent_output = {"message": "PONG"}
+            else:
+                interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['agent']['tool']})
+                synapse.agent_output = interpreter_tool_response['alive']
             return synapse
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
@@ -74,22 +77,22 @@ class Miner(BaseMinerNeuron):
             print("==========",synapse["status"])
             if synapse['status']:
                 print(":::::::::INSIDE_ISALIVE::::::::::")
-                return self.isAlive(synapse['minerId'])
+                return self.isAlive(synapse['toolId'], synapse['minerId'])
             else:    
                 print(":::::::::INSIDE_MAIN::::::::::")
-                return self.main(synapse['minerId'], synapse['query'])
+                return self.main(synapse['toolId'], synapse['query'])
         except Exception as e:
             print(f"Error::::::::interprter_agent_request::::::;", e)
 
-    def isAlive(self,minerId):
+    def isAlive(self,toolId, minerId):
         try:
-            print("::::::::::::::INSIDE_THE_isAlivet_METHOD::::::::::::::::::", minerId)
-            portId = miner_tools[minerId]
+            print("::::::::::::::INSIDE_THE_isAlivet_METHOD::::::::::::::::::", toolId)
+            portId = miner_tools[toolId]
             URL = BASE_URL + str(portId) + '/api/alive'
             print("URL:::::::", URL)
             check_tool_status = request_handler.request_handler_get(URL)
             print(":::::::::::check_tool_status::::::::::::::", check_tool_status)
-            return check_tool_status
+            return {'alive': check_tool_status['alive'], 'toolId': toolId, 'minerId': minerId}
         except Exception as e: 
             print('Something went wrong in isAlive method', e) 
     # print(check_tool_status['alive'])

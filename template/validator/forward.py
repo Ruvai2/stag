@@ -43,14 +43,15 @@ async def forward(self):
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
     bt.logging.debug(":::::::::::::::self.request_type:::::::::::::::::",self.request_type)
     if self.request_type == "PING_MINER":
-        # The dendrite client queries the network.
+        print(":::::::self.query::forward::::::::",self.query)
         responses = self.dendrite.query(
-            axons=[self.valid_miners],
+            axons=[self.metagraph.axons[self.query["minerId"]]],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
         # Log the results for monitoring purposes.
         bt.logging.info(f"Received responses: {responses}") 
+        return responses
     elif self.request_type == "CHECK_TOOL_ALIVE":
         try:
 
@@ -64,6 +65,8 @@ async def forward(self):
                 synapse=InterpreterRequests(query=self.query),
                 deserialize=True,
             )
+            print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
+            return responses
         except Exception as e:
             print(":::::Error while sending dendrite:::::::",e)
     else:

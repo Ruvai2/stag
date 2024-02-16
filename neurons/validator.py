@@ -35,7 +35,9 @@ from template.validator import forward
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
 from template.protocol import PingMiner
+import random
 
+global_object = {}
 
 class Validator(BaseValidatorNeuron):
     """
@@ -52,8 +54,9 @@ class Validator(BaseValidatorNeuron):
         bt.logging.info("=====================================> load_state()")
         bt.logging.info(f":::::::self.axon::::::", self.axon)
         self.load_state()
+        self.group_miners_association = {}
 
-        # TODO(developer): Anything specific to your use case you can do here
+        # TODO(developer): Anything specific to your use case you can do here   
     
     async def forward(self, response):
         """
@@ -85,27 +88,25 @@ class Validator(BaseValidatorNeuron):
 
     def get_valid_miners_info(self):
         self.all_uids = [int(uid) for uid in self.metagraph.uids]
-        valid_miners_info = self.get_miner_info(self.all_uids)
-        return valid_miners_info
+        # valid_miners_info = self.get_miner_info(self.all_uids)
+        return self.all_uids
 
-    async def ping_miner(self, miner_uids, synapse: PingMiner):
+    async def ping_miner(self, isToolList):
         """
         Send a query to a miner and get the response.
         """
         print(":::::::::::::: Inside ping_miner_and_get_response :::::::::::::::::::", self.get_valid_miners_info())
-        self.valid_miners = self.get_valid_miners_info()
-        self.synapse = synapse
+        miner_response_list = []
         self.request_type = "PING_MINER"
-        miner_list = await forward(self)
-        print("::::::::::::::forward_responses::::::::::::::::::::", miner_list)
-        
-        ## save the miner details in db (TODO)
-    
-    def get_all_miners(self):
-        """
-        Get all available miners.
-        """
-        return self.metagraph.axons
+        for miner in self.get_valid_miners_info():
+            self.query ={
+                "minerId": miner,
+                "isToolList": isToolList,
+                "request_type": "PING_MINER",
+            }
+            miner_list = await forward(self)
+            miner_response_list.append(miner_list)
+        print("::::::::::::::forward_responses::::::::::::::::::::", miner_response_list)
     
     async def check_tool_alive(self, miner_uids):
         """
@@ -114,13 +115,17 @@ class Validator(BaseValidatorNeuron):
         alive_tools = []
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
-            # self.minerId = miner['metadata']['uid']
             self.query = {
-                "minerId": 6,
+                "minerId": miner['metadata']['uid'],
                 "toolId": miner['id'],
-                "status": "True"
+                "status": "True",
+                "request_type": "CHECK_TOOL_ALIVE",
+                "groupId": "10011"
             }
-            alive_tools.append(await forward(self))
+            tool_status = (await forward(self))[0]
+            if len(tool_status.keys()) > 0 and tool_status['alive'] == True:
+                tool_status['groupId'] = self.query['groupId']
+                alive_tools.append(tool_status)
         return alive_tools
         
 async def get_query(request: web.Request):
@@ -166,6 +171,40 @@ async def save_miner_info(request: web.Request):
         for chunk in embedded_text['vectorizedChunks']:
             bt.logging.info(f"Chunk: {chunk['vector']}")
             await insert_vector_into_db(chunk)
+
+def get_unique_miner_ids(data):
+    unique_miner_ids = set()
+    result = []
+    
+    for item in data:
+        if 'minerId' in item:
+            miner_id = item['minerId']
+            if miner_id not in unique_miner_ids:
+                unique_miner_ids.add(miner_id)
+                result.append(item)
+    return result
+
+def add_object(group_id, object_data):
+    try:
+        global global_object
+        if group_id in global_object:
+            global_object[group_id].append(object_data)
+        else:
+            global_object[group_id] = [object_data]
+    except Exception as e:
+        print("Error in add_object: ", e)
+        
+def find_group_id(search_id):
+    try:
+        global global_object
+        for group_id, objects in global_object.items():
+            for obj in objects:
+                if obj["id"] == search_id:
+                    return group_id
+        return None
+    except Exception as e:
+        print("Error in find_group_id: ", e)
+        return None
             
 async def request_for_miner(request: web.Request):
     response = await request.json()
@@ -183,24 +222,29 @@ async def request_for_miner(request: web.Request):
     }
     bt.logging.info(f"Received save_miner_info request. {payload}")
     embedded_text = await convert_text_to_vector(payload)
-    bt.logging.info(f"Embedded Text: {embedded_text}")
+    # bt.logging.info(f"Embedded Text: {embedded_text}")
     miner_tools_info = []
     if len(embedded_text['vectorizedChunks']):
         chunk = embedded_text['vectorizedChunks'][0]
         miner_tools_info = (await get_vector_from_db(chunk['vector']))['matches']['matches']
-    print("::::::::::::miner_tools_info::::::::::::::::::", miner_tools_info)
-    
+    print("::::::::::::::miner_tools_info::::::::::::::::::::", miner_tools_info)
     # check if the tool is alive
     print(":::::WORKING_TILL_NOW::::::")
     alive_tools = await webapp.validator.check_tool_alive(miner_tools_info)
     bt.logging.info(f"Alive Tools: {alive_tools}")
+    
+    
+    # get the unique miner ids
+    if len(alive_tools):
+        unique_miners_details = get_unique_miner_ids(alive_tools)[0]
+        print("::::::::::::::unique_miners_details::::::::::::::::::::", unique_miners_details)
+        add_object(unique_miners_details['groupId'], unique_miners_details)
+        print("::::::::::::::unique_miners_details::::::::::::::::::::", global_object)
+        return web.json_response(unique_miners_details)
         
 async def ping_miners(request: web.Request):
-    # Create a new instance of the validator
-    miners = webapp.validator.get_all_miners()
-
     # hit the miner with the query every 1 hour
-    await webapp.validator.ping_miner(miners, PingMiner(isToolList=True))
+    await webapp.validator.ping_miner(True)
     bt.logging.debug(":::::::::::::: Inside main :::::::::::::::::::")
                 
 class WebApp(web.Application):
