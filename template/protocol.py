@@ -64,12 +64,49 @@ class InterpreterRequests(bt.Synapse):
         title="Pipeline Parameters",
         description="Additional generating params",
     )
+    isToolList: bool = pydantic.Field(
+        ..., title="isToolList", description="Whether to generate a summary or not", value = False
+    )
     # status:bool
     # minerId:str
 
     def deserialize(self) -> "InterpreterRequests":
         return self.agent_output
 
+class PingMiner(bt.Synapse):
+    """
+    A simple dummy protocol representation which uses bt.Synapse as its base.
+    This protocol helps in handling dummy request and response communication between
+    the miner and the validator.
+    """
+    
+    isToolList: bool = pydantic.Field(
+        ..., title="isToolList", description="Whether to generate a summary or not", value = False
+    )
+    
+    def deserialize(self) -> "PingMiner":
+        return self.isToolList
+    
+class CheckToolAlive(bt.Synapse):
+    """
+    A simple dummy protocol representation which uses bt.Synapse as its base.
+    This protocol helps in handling dummy request and response communication between
+    the miner and the validator.
+    """
+    
+    minerId: str = pydantic.Field(
+        ..., title="minerId", description="Whether to generate a summary or not", value = False
+    )
+    toolId: str = pydantic.Field(
+        ..., title="toolId", description="Whether to generate a summary or not", value = False
+    )
+    status: bool = pydantic.Field(
+        ..., title="status", description="Whether to generate a summary or not", value = False
+    )
+    
+    def deserialize(self) -> "CheckToolAlive":
+        return self.status
+    
     
     # query: str = pydantic.Field(
     # ..., title="Query", description="The query to pass to the provider"

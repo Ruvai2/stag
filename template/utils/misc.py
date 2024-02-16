@@ -22,6 +22,7 @@ import hashlib as rpccheckhealth
 from math import floor
 from typing import Callable, Any
 from functools import lru_cache, update_wrapper
+import aiohttp
 
 
 # LRU Cache with TTL
@@ -110,3 +111,49 @@ def ttl_get_block(self) -> int:
     Note: self here is the miner or validator instance
     """
     return self.subtensor.get_current_block()
+
+async def api_request_handler(**kwargs):
+    """
+    Request handler for the get query endpoint. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        print(f"Request ::::::::::::::::::::::::::::::::;: {kwargs}")
+        async with aiohttp.ClientSession() as session:
+            if kwargs['method'] == "GET":
+                async with session.get(kwargs['url']) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
+            elif kwargs['method'] == "POST":
+                async with session.post(kwargs['url'], json=kwargs['data']) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
+    except Exception as e:
+        print(f"Error: {e}")
+        
+async def convert_text_to_vector(payload):
+    try:
+        text_embedding_url = "https://daasi-text-embedding.ru9.workers.dev/"
+        embedded_text = await api_request_handler(method="POST", url=text_embedding_url, data=payload)
+        return embedded_text
+    except Exception as e:
+        print(f"Error: {e}")
+        
+async def insert_vector_into_db(payload):
+    try:
+        vector_insert_url = "https://daasi-vectorize.ru9.workers.dev/"
+        response = await api_request_handler(method="POST", url=vector_insert_url, data=payload)
+        return response
+    except Exception as e:
+        print(f"Error: {e}")
+        
+async def get_vector_from_db(query_vector):
+    try:
+        vector_get_url =  f"https://daasi-vectorize.ru9.workers.dev/query?queryVector={query_vector}"
+        response = await api_request_handler(method="GET", url=vector_get_url)
+        return response
+    except Exception as e:
+        print(f"Error: {e}")

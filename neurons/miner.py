@@ -68,7 +68,7 @@ class Miner(BaseMinerNeuron):
             return synapse
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
-
+        
     def interprter_agent_request(self, synapse):
         try:
             print("::::::::::::::INSIDE_THE_interprter_agent_request_METHOD::::::::::::::::::", synapse)

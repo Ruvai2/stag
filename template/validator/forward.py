@@ -19,15 +19,16 @@
 
 import bittensor as bt
 
-from template.protocol import InterpreterRequests
+from template.protocol import InterpreterRequests, CheckToolAlive
 from template.validator.reward import get_rewards
 # from template.utils.uids import get_random_uids
+from template.protocol import PingMiner
 
 
 async def forward(self):
-    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    # print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
     
-    {'query': 'give me the sum of two numbers', 'status': False, 'minerId': '1001'}
+    # {'query': 'give me the sum of two numbers', 'status': False, 'minerId': '1001'}
     """
     The forward function is called by the validator every time step.
 
@@ -40,21 +41,40 @@ async def forward(self):
     # TODO(developer): Define how the validator selects a miner to query, how often, etc.
     # get_random_uids is an example method, but you can replace it with your own.
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
-
-    # The dendrite client queries the network.
-    bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
-    bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
-    bt.logging.info("::::::::::::::SELF.AGENT::::::::::::::::::",self.query["agent"]["uid"])
-    try:
+    bt.logging.debug(":::::::::::::::self.request_type:::::::::::::::::",self.request_type)
+    if self.request_type == "PING_MINER":
+        # The dendrite client queries the network.
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[self.query["agent"]["uid"]]],
+            axons=[self.valid_miners],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
-    except Exception as e:
-        print(":::::Error while sending dendrite:::::::",e)
+        # Log the results for monitoring purposes.
+        bt.logging.info(f"Received responses: {responses}") 
+    elif self.request_type == "CHECK_TOOL_ALIVE":
+        try:
+            responses = self.dendrite.query(
+                axons=[self.minerId],
+                synapse=InterpreterRequests(minerId=self.minerId, toolId=self.toolId, status=self.status),
+                deserialize=True,
+            )
+        except Exception as e:
+            print(":::::Error while sending dendrite:::::::",e)
+    else:
+        # The dendrite client queries the network.
+        bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
+        bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+        bt.logging.info("::::::::::::::SELF.AGENT::::::::::::::::::",self.query["agent"]["uid"])
+        try:
+            responses = self.dendrite.query(
+                axons=[self.metagraph.axons[self.query["agent"]["uid"]]],
+                synapse=InterpreterRequests(query=self.query),
+                deserialize=True,
+            )
+        except Exception as e:
+            print(":::::Error while sending dendrite:::::::",e)
 
-    print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
+        print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
     # res_string  = responses[0]
     # if res_string == None:  res_string = "NULL"
     # async with aiohttp.ClientSession() as session:
