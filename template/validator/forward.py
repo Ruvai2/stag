@@ -18,12 +18,34 @@
 # DEALINGS IN THE SOFTWARE.
 
 import bittensor as bt
-
+import aiohttp
+import asyncio
 from template.protocol import InterpreterRequests
 from template.validator.reward import get_rewards
 # from template.utils.uids import get_random_uids
 
 
+async def send_res_to_group_chat(self):
+    try:
+        print("::::::::send_res_to_group_chat::::::")
+        print("________________________")
+        print(self.query_res)
+        print("________________________")
+
+        while self.query_res["key"] == "INTERPRETER_PROCESSING":
+            # Wait until the key becomes "INTEPRETR_PROGESS"
+            print("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
+            await asyncio.sleep(1)
+        async with aiohttp.ClientSession() as session:
+            async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
+                if response.status == 200:
+                    print("Successfully called the group chat:::::")
+                else:
+                    print(f"Error: {response.status}, {await response.text()}")
+                    print("Failed to call the group chat:::::")
+        return "Successfully called the group chat:::::"
+    except Exception as e:
+        print(":::::Error send_res_to_group_chat:::::::", e)
 async def forward(self):
     print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
     
@@ -53,19 +75,12 @@ async def forward(self):
         )
     except Exception as e:
         print(":::::Error while sending dendrite:::::::",e)
-
-    print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
-    # res_string  = responses[0]
-    # if res_string == None:  res_string = "NULL"
-    # async with aiohttp.ClientSession() as session:
-    #                     async with session.post("http://localhost:8000/api/send_update_after_processing",headers = { "Content-Type": "application/json"}, json={"key" : res_string}) as response:
-    #                         if response.status == 200:
-    #                             print("Successfully called the group chat:::::")
-    #                         else:
-    #                             # Handle errors, you might want to log or raise an exception
-    #                             print(f"Error: {response.status}, {await response.text()}")
-    #                             print("Failed to called the group chat:::::")
-    # print(":::::::::::responses:::::::::",responses)
+    res_string  = responses[0]
+    if res_string["key"]:
+        self.query_res = res_string
+        await send_res_to_group_chat(self)
+    elif res_string["alive"]:
+        print(":::::::alive respionse:::::::::")
     # Log the results for monitoring purposes.
     # bt.logging.info(f"Received responses: {responses}")
 

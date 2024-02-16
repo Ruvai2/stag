@@ -33,8 +33,8 @@ from tools.interpreter_agent import interpreter_tool
 # from tools.interpreter_agent import self_operating_computer
 
 miner_tools = {
-        1001: 8000,
-        1002 : 3000 
+        "1001": 8000,
+        "1002" : 3000 
     }
 BASE_URL = "http://127.0.0.1:"    
 
@@ -52,7 +52,7 @@ class Miner(BaseMinerNeuron):
 
         # TODO(developer): Anything specific to your use case you can do here
 
-    async def forward(
+    def forward(
         self, synapse: template.protocol.InterpreterRequests
     ):
         try:
@@ -61,10 +61,10 @@ class Miner(BaseMinerNeuron):
             # synapse.dummy_output = "Hello"
             # query={'query': 'Create a calcultator program in python', 'agent': {'uid': 6, 'tool': 1001}}
             # return synapse
-            synapse.query['status'] = "True"
+            synapse.query['status'] = False
             interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['agent']['tool']})
             print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
-            synapse.agent_output = interpreter_tool_response['alive']
+            synapse.agent_output = interpreter_tool_response
             return synapse
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
@@ -78,6 +78,7 @@ class Miner(BaseMinerNeuron):
                 return self.isAlive(synapse['minerId'])
             else:    
                 print(":::::::::INSIDE_MAIN::::::::::")
+                print("___________________________",synapse['minerId'], synapse['query'])
                 return self.main(synapse['minerId'], synapse['query'])
         except Exception as e:
             print(f"Error::::::::interprter_agent_request::::::;", e)
@@ -101,8 +102,9 @@ class Miner(BaseMinerNeuron):
             if model == '1001':
                 print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
                 interpreter_tool(query)
+                return {'key': 'INTERPRETER_PROCESSING'}
             else :
-                return {'result': 'Model does not exist'}
+                return {'key': 'Model does not exist'}
         except Exception as e: 
             print(f"Error::::::::main::::::;", e)
         

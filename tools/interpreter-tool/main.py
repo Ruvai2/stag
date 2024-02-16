@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()
-open_intepreter_path = os.getenv("OPEN_INTERPRETER_PATH")
 import sys
+load_dotenv()
+open_intepreter_path = '/Users/w3villa/Daasi/open-interpreter'
 sys.path.append(open_intepreter_path)
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse

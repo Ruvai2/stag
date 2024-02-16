@@ -2,7 +2,7 @@ import os
 import threading
 from dotenv import load_dotenv
 load_dotenv()
-URL = os.getenv("YOUR_AGENT_URL")
+URL = os.getenv("http://127.0.0.1:9001/api/interpreter")
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ from websocket_client import main
 # start_websocket_client("Hy, i'm chat box")
 # port 8000
 app = FastAPI()
-INTERPRETER_URL = URL
+INTERPRETER_URL = "http://127.0.0.1:9001/api/interpreter"
 
 def openai_chat(chat_detail):
     """
@@ -61,6 +61,7 @@ def openai_chat_endpoint(message: Item):
      - It then selects the best solution and performs further processing based on the selected planner. If an exception occurs, it returns a message indicating the failure.
     """
     try:
+        print(":::::::::::::INSIDE_API_OPENAI::::::::::::::")
         if not message.summary:
             threading.Thread(target=driver, args=(message,)).start()
         else:
@@ -84,8 +85,8 @@ def driver(message):
     planner2_response = ai_planner_2(message.key)
     planner3_response = ai_planner_3(message.key)
     planner1_result = ai_solution_marking(planner1_response['result'])
-    planner2_result = ai_solution_marking(planner1_response['result'])
-    planner3_result = ai_solution_marking(planner1_response['result'])
+    planner2_result = ai_solution_marking(planner2_response['result'])
+    planner3_result = ai_solution_marking(planner3_response['result'])
     # print(":::::::::::Planner1::::::::::::::::::::", planner1_result)
     # print(":::::::::::Planner2::::::::::::::::::::", planner2_result)
     # print(":::::::::::Planner3::::::::::::::::::::", planner3_result)
@@ -93,7 +94,7 @@ def driver(message):
     best_solution.append({'marks':planner2_result['result'], 'name': 'planner2'})
     best_solution.append({'marks':planner3_result['result'], 'name': 'planner3'})
     max_data = max(best_solution, key=lambda x: x['marks'])
-    webhook_url = 'http://0.0.0.0:9080/webhook'
+    webhook_url = 'http://0.0.0.0:8080/webhook'
     
     if max_data['name'] == 'planner1':
         check = check_content(planner1_response['result'])

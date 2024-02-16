@@ -28,7 +28,7 @@ import asyncio
 
 # Bittensor Validator Template:
 import template
-from template.validator import forward
+from template.validator import forward,send_res_to_group_chat
 
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
@@ -76,6 +76,12 @@ class Validator(BaseValidatorNeuron):
         # bt.logging.info("synapse agent: ", self.agent)
         query_response = await forward(self)
         return query_response
+    async def interpreter_response(self, response):
+        bt.logging.info("interpreter_response", response)
+        self.query_res = response
+        bt.logging.info("interpreter_response: ", self.query_res)
+        query_response = await send_res_to_group_chat(self)
+        return query_response
     
 async def get_query(request: web.Request):
         """
@@ -101,9 +107,9 @@ async def miner_response(request: web.Request):
         Get query request handler. This method handles the incoming requests and returns the response from the forward function.
         """
         response = await request.json()
-        
+        print("::::::::::response:::::::miner_response:::::::::",response)
         bt.logging.info(f"Received query request. {response}")
-        # return web.json_response(await webapp.validator.forward(response))
+        return web.json_response(await webapp.validator.interpreter_response(response))
 
 webapp = WebApp(Validator())
 webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response)])
