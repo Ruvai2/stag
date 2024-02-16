@@ -33,8 +33,8 @@ from tools.interpreter_agent import interpreter_tool
 # from tools.interpreter_agent import self_operating_computer
 
 miner_tools = {
-        '1001': 8000,
-        '1002' : 3000 
+        1001: 8000,
+        1002 : 3000 
     }
 BASE_URL = "http://127.0.0.1:"    
 
@@ -56,42 +56,35 @@ class Miner(BaseMinerNeuron):
         self, synapse: template.protocol.InterpreterRequests
     ):
         try:
-            print(":::::::::::::::::synapse::::::::::::::::")
-            """
-            Processes the incoming 'Dummy' synapse by performing a predefined operation on the input data.
-            This method should be replaced with actual logic relevant to the miner's purpose.
-
-            async def miner_2():
-                print(":::::::::::::::miner_2::::::::::::::::::")
-                persona =  You are a python developer who when given a Input you will.
-                            - First Read and understand the request to see if its relevant to python execution.
-                            - Youll not execute anything if there is no plan or clear instruction to write and provide a code.
-                            - If its not related to python or code execution just say "Null" or give a reply "Null" 
-                            - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
-                            - If you fully satisfied with the previous response, then just say "End_Conversation"
-                return await call_openai(synapse.dummy_input,persona)
-
-            Returns:
-                template.protocol.Dummy: The synapse object with the 'dummy_output' field set to twice the 'dummy_input' value.
-
-            The 'forward' function is a placeholder and should be overridden with logic that is appropriate for
-            the miner's intended operation. This method demonstrates a basic transformation of input data.
-            """
+            print(":::::::inside the miner:::::::::::")
             print(":::::::::::::::::synapse::::::::::::::::", synapse)
-            interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['minerId']})
+            # synapse.dummy_output = "Hello"
+            # query={'query': 'Create a calcultator program in python', 'agent': {'uid': 6, 'tool': 1001}}
+            # return synapse
+            synapse.query['status'] = "True"
+            interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['agent']['tool']})
             print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
+            synapse.agent_output = interpreter_tool_response['alive']
             return synapse
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
 
     def interprter_agent_request(self, synapse):
+        try:
+            print("::::::::::::::INSIDE_THE_interprter_agent_request_METHOD::::::::::::::::::", synapse)
+            print("==========",synapse["status"])
             if synapse['status']:
+                print(":::::::::INSIDE_ISALIVE::::::::::")
                 return self.isAlive(synapse['minerId'])
             else:    
+                print(":::::::::INSIDE_MAIN::::::::::")
                 return self.main(synapse['minerId'], synapse['query'])
+        except Exception as e:
+            print(f"Error::::::::interprter_agent_request::::::;", e)
 
     def isAlive(self,minerId):
         try:
+            print("::::::::::::::INSIDE_THE_isAlivet_METHOD::::::::::::::::::", minerId)
             portId = miner_tools[minerId]
             URL = BASE_URL + str(portId) + '/api/alive'
             print("URL:::::::", URL)
@@ -103,13 +96,15 @@ class Miner(BaseMinerNeuron):
     # print(check_tool_status['alive'])
 
     def main(self, model, query, summary=False):
-        print("::::::::MODEL::::::::::::", model)
-        if model == '1001':
-            print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
-            interpreter_tool(query)
-        else :
-            return {'result': 'Model does not exist'}
-
+        try:
+            print("::::::::MODEL::::::::::::", model)
+            if model == '1001':
+                print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
+                interpreter_tool(query)
+            else :
+                return {'result': 'Model does not exist'}
+        except Exception as e: 
+            print(f"Error::::::::main::::::;", e)
         
     
     async def blacklist(

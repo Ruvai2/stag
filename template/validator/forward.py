@@ -25,8 +25,8 @@ from template.validator.reward import get_rewards
 
 
 async def forward(self):
-    # print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query['query'])
-    # print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query['query']))
+    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    
     {'query': 'give me the sum of two numbers', 'status': False, 'minerId': '1001'}
     """
     The forward function is called by the validator every time step.
@@ -42,17 +42,29 @@ async def forward(self):
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
 
     # The dendrite client queries the network.
-    print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
-    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
-    self.problem_statement = "Create a program of Addition in python."
+    bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
+    bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    bt.logging.info("::::::::::::::SELF.AGENT::::::::::::::::::",self.query["agent"]["uid"])
     try:
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[7]],
+            axons=[self.metagraph.axons[self.query["agent"]["uid"]]],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
     except Exception as e:
         print(":::::Error while sending dendrite:::::::",e)
+
+    print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
+    # res_string  = responses[0]
+    # if res_string == None:  res_string = "NULL"
+    # async with aiohttp.ClientSession() as session:
+    #                     async with session.post("http://localhost:8000/api/send_update_after_processing",headers = { "Content-Type": "application/json"}, json={"key" : res_string}) as response:
+    #                         if response.status == 200:
+    #                             print("Successfully called the group chat:::::")
+    #                         else:
+    #                             # Handle errors, you might want to log or raise an exception
+    #                             print(f"Error: {response.status}, {await response.text()}")
+    #                             print("Failed to called the group chat:::::")
     # print(":::::::::::responses:::::::::",responses)
     # Log the results for monitoring purposes.
     # bt.logging.info(f"Received responses: {responses}")

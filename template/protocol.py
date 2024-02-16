@@ -58,7 +58,7 @@ class InterpreterRequests(bt.Synapse):
     # dummy_input: str
 
     # Optional request output, filled by recieving axon.
-    # dummy_output: typing.Optional[str] = None
+    agent_output: typing.Optional[str] = None
     query:dict = pydantic.Field(
         default={},
         title="Pipeline Parameters",
@@ -68,7 +68,7 @@ class InterpreterRequests(bt.Synapse):
     # minerId:str
 
     def deserialize(self) -> "InterpreterRequests":
-        return self
+        return self.agent_output
 
     
     # query: str = pydantic.Field(
@@ -90,20 +90,20 @@ class InterpreterRequests(bt.Synapse):
     # def deserialize(self) -> str:
     #     """
     #     Deserialize the dummy output. This method retrieves the response from
-    #     the miner in the form of dummy_output, deserializes it and returns it
+    #     the miner in the form of agent_output, deserializes it and returns it
     #     as the output of the dendrite.query() call.
 
     #     Returns:
-    #     - int: The deserialized response, which in this case is the value of dummy_output.
+    #     - int: The deserialized response, which in this case is the value of agent_output.
 
     #     Example:
-    #     Assuming a Dummy instance has a dummy_output value of 5:
+    #     Assuming a Dummy instance has a agent_output value of 5:
     #     >>> dummy_instance = Dummy(dummy_input=4)
-    #     >>> dummy_instance.dummy_output = 5
+    #     >>> dummy_instance.agent_output = 5
     #     >>> dummy_instance.deserialize()
     #     5
     #     """
-    #     return self.dummy_output
+    #     return self.agent_output
 
 # class InterpreterRequests(bt.Synapse):
 #     # completion: Optional[str] = pydantic.Field(

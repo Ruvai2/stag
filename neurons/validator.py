@@ -68,11 +68,12 @@ class Validator(BaseValidatorNeuron):
         # craete a synapse query
         # bt.logging.info("Creating synapse query", self.step)
         # synapse = template.protocol.Dummy(dummy_input=self.step)
-        
+        # {'query': None, 'agent': {'uid': 6, 'tool': 1002}}
         bt.logging.info("Creating synapse query", response)
-        self.query = response['query']
-        self.agent = response['agent']
+        self.query = response
+        # self.agent = response['agent'] 
         bt.logging.info("synapse query: ", self.query)
+        # bt.logging.info("synapse agent: ", self.agent)
         query_response = await forward(self)
         return query_response
     
@@ -106,4 +107,4 @@ async def miner_response(request: web.Request):
 
 webapp = WebApp(Validator())
 webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response)])
-web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())
+web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
