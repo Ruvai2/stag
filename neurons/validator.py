@@ -115,9 +115,11 @@ class Validator(BaseValidatorNeuron):
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
             # self.minerId = miner['metadata']['uid']
-            self.minerId = 2
-            self.toolId = miner['id']
-            self.status = "True"
+            self.query = {
+                "minerId": 6,
+                "toolId": miner['id'],
+                "status": "True"
+            }
             alive_tools.append(await forward(self))
         return alive_tools
         
@@ -189,6 +191,7 @@ async def request_for_miner(request: web.Request):
     print("::::::::::::miner_tools_info::::::::::::::::::", miner_tools_info)
     
     # check if the tool is alive
+    print(":::::WORKING_TILL_NOW::::::")
     alive_tools = await webapp.validator.check_tool_alive(miner_tools_info)
     bt.logging.info(f"Alive Tools: {alive_tools}")
         

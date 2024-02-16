@@ -61,7 +61,6 @@ class Miner(BaseMinerNeuron):
             # synapse.dummy_output = "Hello"
             # query={'query': 'Create a calcultator program in python', 'agent': {'uid': 6, 'tool': 1001}}
             # return synapse
-            synapse.query['status'] = "True"
             interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['agent']['tool']})
             print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
             synapse.agent_output = interpreter_tool_response['alive']

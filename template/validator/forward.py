@@ -53,9 +53,15 @@ async def forward(self):
         bt.logging.info(f"Received responses: {responses}") 
     elif self.request_type == "CHECK_TOOL_ALIVE":
         try:
+
+            print("::CHECK_TOOL_ALIVE:::")
+            # print(":::::self.query::::::",self.query)
+            print(":::::self::::::",self)
+            
+            print(":::::::self.query::forward::::::::",self.query)
             responses = self.dendrite.query(
-                axons=[self.minerId],
-                synapse=InterpreterRequests(minerId=self.minerId, toolId=self.toolId, status=self.status),
+                axons=[self.metagraph.axons[self.query["minerId"]]],
+                synapse=InterpreterRequests(query=self.query),
                 deserialize=True,
             )
         except Exception as e:

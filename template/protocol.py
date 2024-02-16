@@ -64,9 +64,9 @@ class InterpreterRequests(bt.Synapse):
         title="Pipeline Parameters",
         description="Additional generating params",
     )
-    isToolList: bool = pydantic.Field(
-        ..., title="isToolList", description="Whether to generate a summary or not", value = False
-    )
+    # isToolList: bool = pydantic.Field(
+    #     ..., title="isToolList", description="Whether to generate a summary or not", value = False
+    # )
     # status:bool
     # minerId:str
 
