@@ -44,7 +44,7 @@ async def forward(self):
     # The dendrite client queries the network.
     print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
     print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
-    self.problem_statement = "Create a program of Addition in python."
+    # self.problem_statement = "Create a program of Addition in python."
     try:
         responses = self.dendrite.query(
             axons=[self.metagraph.axons[7]],
