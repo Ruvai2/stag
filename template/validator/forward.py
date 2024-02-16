@@ -18,16 +18,15 @@
 # DEALINGS IN THE SOFTWARE.
 
 import bittensor as bt
-
+from colorama import init, Fore, Style
 from template.protocol import InterpreterRequests
 from template.validator.reward import get_rewards
 # from template.utils.uids import get_random_uids
 
 
 async def forward(self):
-    # print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query['query'])
-    # print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query['query']))
     {'query': 'give me the sum of two numbers', 'status': False, 'minerId': '1001'}
+
     """
     The forward function is called by the validator every time step.
 
@@ -42,25 +41,26 @@ async def forward(self):
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
 
     # The dendrite client queries the network.
-    print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
-    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    
     # self.problem_statement = "Create a program of Addition in python."
+    print(f"{Fore.YELLOW}{Style.BRIGHT}[VALIDATOR]{Style.RESET_ALL} {self.query}")
     try:
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[7]],
+            axons=[self.metagraph.axons[11]],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
+        # return responses    
     except Exception as e:
-        print(":::::Error while sending dendrite:::::::",e)
+        print(":::::Error while sending dendrite:::::::")
     # print(":::::::::::responses:::::::::",responses)
     # Log the results for monitoring purposes.
-    # bt.logging.info(f"Received responses: {responses}")
+    # # bt.logging.info(f"Received responses: {responses}")
 
     # TODO(developer): Define how the validator scores responses.
     # Adjust the scores based on responses from miners.
     # rewards = get_rewards(self, query=self.step, responses=responses)
 
-    # bt.logging.info(f"Scored responses: {rewards}")
+    # # bt.logging.info(f"Scored responses: {rewards}")
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
     # self.update_scores(rewards, 11)

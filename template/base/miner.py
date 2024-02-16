@@ -35,26 +35,26 @@ class BaseMinerNeuron(BaseNeuron):
         super().__init__(config=config)
 
         # Warn if allowing incoming requests from anyone.
-        if not self.config.blacklist.force_validator_permit:
-            bt.logging.warning(
-                "You are allowing non-validators to send requests to your miner. This is a security risk."
-            )
-        if self.config.blacklist.allow_non_registered:
-            bt.logging.warning(
-                "You are allowing non-registered entities to send requests to your miner. This is a security risk."
-            )
+        # if not self.config.blacklist.force_validator_permit:
+            # bt.logging.warning(
+            #     "You are allowing non-validators to send requests to your miner. This is a security risk."
+            # )
+        # if self.config.blacklist.allow_non_registered:
+            # bt.logging.warning(
+            #     "You are allowing non-registered entities to send requests to your miner. This is a security risk."
+            # )
 
         # The axon handles request processing, allowing validators to send this miner requests.
         self.axon = bt.axon(wallet=self.wallet, config=self.config)
 
         # Attach determiners which functions are called when servicing a request.
-        bt.logging.info(f"Attaching forward function to miner axon.")
+        # bt.logging.info(f"Attaching forward function to miner axon.")
         self.axon.attach(
             forward_fn=self.forward,
             blacklist_fn=self.blacklist,
             priority_fn=self.priority,
         )
-        bt.logging.info(f"Axon created: {self.axon}")
+        # bt.logging.info(f"Axon created: {self.axon}")
 
         # Instantiate runners
         self.should_exit: bool = False
@@ -90,15 +90,15 @@ class BaseMinerNeuron(BaseNeuron):
 
         # Serve passes the axon information to the network + netuid we are hosting on.
         # This will auto-update if the axon port of external ip have changed.
-        bt.logging.info(
-            f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
-        )
+        # bt.logging.info(
+        #     f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
+        # )
         self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
 
         # Start  starts the miner's axon, making it active on the network.
         self.axon.start()
 
-        bt.logging.info(f"Miner starting at block: {self.block}")
+        # bt.logging.info(f"Miner starting at block: {self.block}")
 
         # This loop maintains the miner's operations until intentionally stopped.
         try:
@@ -121,7 +121,7 @@ class BaseMinerNeuron(BaseNeuron):
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
             self.axon.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
+            # bt.logging.success("Miner killed by keyboard interrupt.")
             exit()
 
         # In case of unforeseen errors, the miner will log the error and continue operations.
@@ -134,23 +134,23 @@ class BaseMinerNeuron(BaseNeuron):
         This is useful for non-blocking operations.
         """
         if not self.is_running:
-            bt.logging.debug("Starting miner in background thread.")
+            # bt.logging.debug("Starting miner in background thread.")
             self.should_exit = False
             self.thread = threading.Thread(target=self.run, daemon=True)
             self.thread.start()
             self.is_running = True
-            bt.logging.debug("Started")
+            # bt.logging.debug("Started")
 
     def stop_run_thread(self):
         """
         Stops the miner's operations that are running in the background thread.
         """
         if self.is_running:
-            bt.logging.debug("Stopping miner in background thread.")
+            # bt.logging.debug("Stopping miner in background thread.")
             self.should_exit = True
             self.thread.join(5)
             self.is_running = False
-            bt.logging.debug("Stopped")
+            # bt.logging.debug("Stopped")
 
     def __enter__(self):
         """
@@ -201,15 +201,16 @@ class BaseMinerNeuron(BaseNeuron):
             )
 
         except Exception as e:
-            bt.logging.error(
-                f"Failed to set weights on chain with exception: { e }"
-            )
+            return
+            # bt.logging.error(
+            #     f"Failed to set weights on chain with exception: { e }"
+            # )
 
-        bt.logging.info(f"Set weights: {chain_weights}")
+        # bt.logging.info(f"Set weights: {chain_weights}")
 
     def resync_metagraph(self):
         """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
-        bt.logging.info("resync_metagraph()")
+        # bt.logging.info("resync_metagraph()")
 
         # Sync the metagraph.
         self.metagraph.sync(subtensor=self.subtensor)

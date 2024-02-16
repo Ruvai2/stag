@@ -272,7 +272,7 @@ class StreamingTemplateMiner(prompting.Miner):
             miner. Developers can swap out the tokenizer, model, or adjust how streaming responses
             are generated to suit their specific applications.
         """
-        bt.logging.trace("In outer PROMPT()")
+        # bt.logging.trace("In outer PROMPT()")
         tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
         # Simulated function to decode token IDs into strings. In a real-world scenario,
@@ -298,21 +298,21 @@ class StreamingTemplateMiner(prompting.Miner):
                 response, or the model being used. Developers can also introduce more sophisticated
                 processing steps or modify how tokens are sent back to the client.
             """
-            bt.logging.trace("In inner _PROMPT()")
+            # bt.logging.trace("In inner _PROMPT()")
             input_ids = tokenizer(text, return_tensors="pt").input_ids.squeeze()
             buffer = []
-            bt.logging.debug(f"Input text: {text}")
-            bt.logging.debug(f"Input ids: {input_ids}")
+            # bt.logging.debug(f"Input text: {text}")
+            # bt.logging.debug(f"Input ids: {input_ids}")
              
             N = 3  # Number of tokens to send back to the client at a time
             for token in model(input_ids):
-                bt.logging.trace(f"appending token: {token}")
+                # bt.logging.trace(f"appending token: {token}")
                 buffer.append(token)
                 # If buffer has N tokens, send them back to the client.
                 if len(buffer) == N:
                     time.sleep(0.1)
                     joined_buffer = "".join(buffer)
-                    bt.logging.debug(f"sedning tokens: {joined_buffer}")
+                    # bt.logging.debug(f"sedning tokens: {joined_buffer}")
                     await send(
                         {
                             "type": "http.response.body",
@@ -320,7 +320,7 @@ class StreamingTemplateMiner(prompting.Miner):
                             "more_body": True,
                         }
                     )
-                    bt.logging.debug(f"Streamed tokens: {joined_buffer}")
+                    # bt.logging.debug(f"Streamed tokens: {joined_buffer}")
                     buffer = []  # Clear the buffer for next batch of tokens
 
             # Send any remaining tokens in the buffer
@@ -333,12 +333,12 @@ class StreamingTemplateMiner(prompting.Miner):
                         "more_body": False,  # No more tokens to send
                     }
                 )
-                bt.logging.trace(f"Streamed tokens: {joined_buffer}")
+                # bt.logging.trace(f"Streamed tokens: {joined_buffer}")
 
         message = synapse.messages[0]
-        bt.logging.trace(f"message in _prompt: {message}")
+        # bt.logging.trace(f"message in _prompt: {message}")
         token_streamer = partial(_prompt, message)
-        bt.logging.trace(f"token streamer: {token_streamer}")
+        # bt.logging.trace(f"token streamer: {token_streamer}")
         return synapse.create_streaming_response(token_streamer)
 ```
 

@@ -98,10 +98,9 @@ def summarize_chat_history_and_append(content):
     data = {'model': 'gpt-4-1106-preview', 'messages': chat_history_clone, 'temperature':0.5}
     response = requests.post(url, headers=headers, json=data)
     assistant_reply = response.json()['choices'][0]['message']['content']
-    print("ASSINTANT REPLY", assistant_reply)
+
     index = assistant_reply.find('APPEND')
     if index != -1:
-        print("===================APPENDING TO ORIGINAL CHAT HISTORY=====================")
         chat_history.append({"role":"user","content":content})
     else :        
       chat_history.append({"role": "user", "content": content})

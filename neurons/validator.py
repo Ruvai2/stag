@@ -32,6 +32,7 @@ from template.validator import forward
 
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
+from colorama import init, Fore, Style
 
 
 
@@ -48,8 +49,8 @@ class Validator(BaseValidatorNeuron):
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
 
-        bt.logging.info("=====================================> load_state()")
-        bt.logging.info(f":::::::self.axon::::::", self.axon)
+        # bt.logging.info("=====================================> load_state()")
+        # bt.logging.info(f":::::::self.axon::::::", self.axon)
         self.load_state()
 
         # TODO(developer): Anything specific to your use case you can do here
@@ -66,12 +67,12 @@ class Validator(BaseValidatorNeuron):
         # TODO(developer): Rewrite this function based on your protocol definition.
 
         # craete a synapse query
-        # bt.logging.info("Creating synapse query", self.step)
+        # # bt.logging.info("Creating synapse query", self.step)
         # synapse = template.protocol.Dummy(dummy_input=self.step)
         
-        bt.logging.info("Creating synapse query", response)
+        # bt.logging.info("Creating synapse query", response)
         self.query = response['query']
-        bt.logging.info("synapse query: ", self.query)
+        # bt.logging.info("synapse query: ", self.query)
         query_response = await forward(self)
         return query_response
     
@@ -81,7 +82,7 @@ async def get_query(request: web.Request):
         """
         response = await request.json()
         
-        bt.logging.info(f"Received query request. {response}")
+        # bt.logging.info(f"Received query request. {response}")
         return web.json_response(await webapp.validator.forward(response))
     
 class WebApp(web.Application):
@@ -98,9 +99,7 @@ async def miner_response(request: web.Request):
         Get query request handler. This method handles the incoming requests and returns the response from the forward function.
         """
         response = await request.json()
-        
-        bt.logging.info(f"Received query request. {response}")
-        # return web.json_response(await webapp.validator.forward(response))
+        print(f"{Fore.GREEN}{Style.BRIGHT}[MINER]{Style.RESET_ALL} {response}")
 
 webapp = WebApp(Validator())
 webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response)])

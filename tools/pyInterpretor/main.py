@@ -12,6 +12,7 @@ from utilshandlers.request_handler import request_handler
 from utilshandlers.openai_planner import ai_planner_1, ai_planner_2, ai_planner_3, chat_history, summarize_chat_history_and_append, summarize_chat_history
 from utilshandlers.openai_planner import ai_solution_marking
 from websocket_client import main
+from colorama import init, Fore, Style
 
 # def start_websocket_client(param):
 #     thread = Thread(target=lambda: main(text=param))
@@ -80,51 +81,54 @@ def openai_chat_endpoint(message: Item):
 
 def driver(message):
     best_solution = []
+    print(f"{Fore.GREEN}{Style.BRIGHT}[INTERPRETR/HUMAN_QUERY]{Style.RESET_ALL} {message.key}")
     planner1_response = ai_planner_1(message.key)
-    planner2_response = ai_planner_2(message.key)
-    planner3_response = ai_planner_3(message.key)
+    # planner2_response = ai_planner_2(message.key)
+    # planner3_response = ai_planner_3(message.key)
     planner1_result = ai_solution_marking(planner1_response['result'])
-    planner2_result = ai_solution_marking(planner1_response['result'])
-    planner3_result = ai_solution_marking(planner1_response['result'])
+    planner_response = planner1_response['result']
+    print(f"{Fore.YELLOW}{Style.BRIGHT}[PLANNER]{Style.RESET_ALL} {planner_response}")
+    # planner2_result = ai_solution_marking(planner1_response['result'])
+    # planner3_result = ai_solution_marking(planner1_response['result'])
     # print(":::::::::::Planner1::::::::::::::::::::", planner1_result)
     # print(":::::::::::Planner2::::::::::::::::::::", planner2_result)
     # print(":::::::::::Planner3::::::::::::::::::::", planner3_result)
     best_solution.append({'marks':planner1_result['result'], 'name': 'planner1'})
-    best_solution.append({'marks':planner2_result['result'], 'name': 'planner2'})
-    best_solution.append({'marks':planner3_result['result'], 'name': 'planner3'})
+    # best_solution.append({'marks':planner2_result['result'], 'name': 'planner2'})
+    # best_solution.append({'marks':planner3_result['result'], 'name': 'planner3'})
     max_data = max(best_solution, key=lambda x: x['marks'])
     webhook_url = 'http://0.0.0.0:9080/webhook'
     
     if max_data['name'] == 'planner1':
         check = check_content(planner1_response['result'])
         if check:
-            print(":::::::::::::::END_CONVERSATION::::::::::::::::::")
+            END_CONVERSATION = "CONVERSATION ENDED B/W OPEN-INTERPRETER AND INTERPRETER-AGENT"
+            print(f"{Fore.CYAN}{Style.BRIGHT}[PLANNER]{Style.RESET_ALL} {END_CONVERSATION}")
             response_from_summarize_chat_history = summarize_chat_history()
-            print(":::::::::::::response_from_summarize_chat_history:::::::::::::", response_from_summarize_chat_history)
             data_to_send = {"key": response_from_summarize_chat_history}
             request_handler(webhook_url, data_to_send)
             return 
         request_handler(INTERPRETER_URL, {"key": planner1_response['result']})
-    elif max_data['name'] == 'planner2':
-        check = check_content(planner1_response['result'])
-        if check: 
-            print(":::::::::::::::END_CONVERSATION::::::::::::::::::")
-            response_from_summarize_chat_history = summarize_chat_history()
-            print(":::::::::::::response_from_summarize_chat_history:::::::::::::", response_from_summarize_chat_history)
-            data_to_send = {"key": response_from_summarize_chat_history}
-            request_handler(webhook_url, data_to_send)
-            return
-        request_handler(INTERPRETER_URL, {"key": planner2_response['result']})
-    elif max_data['name'] == 'planner3':
-        check = check_content(planner1_response['result'])
-        if check:
-            print(":::::::::::::::END_CONVERSATION::::::::::::::::::")
-            response_from_summarize_chat_history = summarize_chat_history()
-            print(":::::::::::::response_from_summarize_chat_history:::::::::::::", response_from_summarize_chat_history)
-            data_to_send = {"key": response_from_summarize_chat_history}
-            request_handler(webhook_url, data_to_send)
-            return
-        request_handler(INTERPRETER_URL, {"key": planner3_response['result']})
+    # elif max_data['name'] == 'planner2':
+    #     check = check_content(planner1_response['result'])
+    #     if check: 
+    #         print(":::::::::::::::END_CONVERSATION::::::::::::::::::")
+    #         response_from_summarize_chat_history = summarize_chat_history()
+    #         print(":::::::::::::response_from_summarize_chat_history:::::::::::::", response_from_summarize_chat_history)
+    #         data_to_send = {"key": response_from_summarize_chat_history}
+    #         request_handler(webhook_url, data_to_send)
+    #         return
+    #     request_handler(INTERPRETER_URL, {"key": planner2_response['result']})
+    # elif max_data['name'] == 'planner3':
+    #     check = check_content(planner1_response['result'])
+    #     if check:
+    #         print(":::::::::::::::END_CONVERSATION::::::::::::::::::")
+    #         response_from_summarize_chat_history = summarize_chat_history()
+    #         print(":::::::::::::response_from_summarize_chat_history:::::::::::::", response_from_summarize_chat_history)
+    #         data_to_send = {"key": response_from_summarize_chat_history}
+    #         request_handler(webhook_url, data_to_send)
+    #         return
+        # request_handler(INTERPRETER_URL, {"key": planner3_response['result']})
 
 
 @app.get("/api/alive")

@@ -24,6 +24,7 @@ import aiohttp
 import requests
 # Bittensor Miner Template:
 import template
+from colorama import init, Fore, Style
 
 # import base miner class which takes care of most of the boilerplate
 from template.base.miner import BaseMinerNeuron
@@ -52,7 +53,6 @@ class Miner(BaseMinerNeuron):
         self, synapse: template.protocol.InterpreterRequests
     ):
         try:
-            print(":::::::::::::::::synapse::::::::::::::::")
             """
             Processes the incoming 'Dummy' synapse by performing a predefined operation on the input data.
             This method should be replaced with actual logic relevant to the miner's purpose.
@@ -66,18 +66,17 @@ class Miner(BaseMinerNeuron):
             The 'forward' function is a placeholder and should be overridden with logic that is appropriate for
             the miner's intended operation. This method demonstrates a basic transformation of input data.
             """
-            print(":::::::::::::::::synapse::::::::::::::::", synapse)
+            print(f"{Fore.GREEN}{Style.BRIGHT}[VALIDATOR_REQUEST]{Style.RESET_ALL} {synapse.query}")
             interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['minerId'], "summary": synapse.query['summary']})
-            print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
+            print(f"{Fore.GREEN}{Style.BRIGHT}[MINER]{Style.RESET_ALL} {interpreter_tool_response}")
             return synapse
         except Exception as e:
-            print(f"::::Error in forward::::", e)
+            print(f"::::Error in forward::::")
 
     def interpreter_agent_request(self, synapse):
         try:
             miner_ports_ids_mapping.get_miner_port(synapse['minerId'])
             portId = str(miner_ports_ids_mapping.miner_port_mappings.get(synapse['minerId'], None))
-            print(":::::::::::::::::portId::::::::::::::::", portId)
 
             if not portId:
                 return {'result': 'Miner does not exist'}
@@ -92,16 +91,13 @@ class Miner(BaseMinerNeuron):
     def isAlive(self,portId):
         try:
             URL = BASE_URL + portId + '/api/alive'
-            print("URL:::::::", URL)
             check_tool_status = request_handler.request_handler_get(URL)
-            print(":::::::::::check_tool_status::::::::::::::", check_tool_status)
             return check_tool_status
         except Exception as e: 
             print(f"::::Error in isAlive::::", e) 
 
     def interpreter_main(self, model, query, summary, portId):
         try:
-            print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
             interpreter_tool(query, summary, portId)
         except Exception as e:
             print(f"::::Error in main::::", e)
@@ -141,14 +137,14 @@ class Miner(BaseMinerNeuron):
         # TODO(developer): Define how miners should blacklist requests.
         if synapse.dendrite.hotkey not in self.metagraph.hotkeys:
             # Ignore requests from unrecognized entities.
-            bt.logging.trace(
-                f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
-            )
+            # bt.logging.trace(
+                # f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
+            # )
             return True, "Unrecognized hotkey"
 
-        bt.logging.trace(
-            f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
-        )
+        # bt.logging.trace(
+            # f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+        # )
         return False, "Hotkey recognized!"
 
     async def priority(self, synapse: template.protocol.InterpreterRequests) -> float:
@@ -178,9 +174,9 @@ class Miner(BaseMinerNeuron):
         prirority = float(
             self.metagraph.S[caller_uid]
         )  # Return the stake as the priority.
-        bt.logging.trace(
-            f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
-        )
+        # bt.logging.trace(
+        #     f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
+        # )
         return prirority
 
 
@@ -188,5 +184,5 @@ class Miner(BaseMinerNeuron):
 if __name__ == "__main__":
     with Miner() as miner:
         while True:
-            bt.logging.info("Miner running...", time.time())
+            # bt.logging.info("Miner running...", time.time())
             time.sleep(5)
