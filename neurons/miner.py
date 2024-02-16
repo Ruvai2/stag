@@ -30,6 +30,7 @@ from template.base.miner import BaseMinerNeuron
 from utils import request_handler
 # from tools.open_ai import open_ai_main
 from tools.interpreter_agent import interpreter_tool
+from tools.tools_list import tool_lists
 # from tools.interpreter_agent import self_operating_computer
 
 miner_tools = {
@@ -47,6 +48,8 @@ class Miner(BaseMinerNeuron):
     This class provides reasonable default behavior for a miner such as blacklisting unrecognized hotkeys, prioritizing requests based on stake, and forwarding requests to the forward function. If you need to define custom
     """
 
+
+
     def __init__(self, config=None):
         super(Miner, self).__init__(config=config)
 
@@ -54,28 +57,20 @@ class Miner(BaseMinerNeuron):
 
     async def forward(
         self, synapse: template.protocol.InterpreterRequests
-    ):
+    )-> template.protocol.InterpreterRequests:
         try:
-            print(":::::::::::::::::synapse::::::::::::::::")
-            """
-            Processes the incoming 'Dummy' synapse by performing a predefined operation on the input data.
-            This method should be replaced with actual logic relevant to the miner's purpose.
-
-            Args:
-                synapse (template.protocol.Dummy): The synapse object containing the 'dummy_input' data.
-
-            Returns:
-                template.protocol.Dummy: The synapse object with the 'dummy_output' field set to twice the 'dummy_input' value.
-
-            The 'forward' function is a placeholder and should be overridden with logic that is appropriate for
-            the miner's intended operation. This method demonstrates a basic transformation of input data.
-            """
-            print(":::::::::::::::::synapse::::::::::::::::", synapse)
+            if synapse.query['query']['is_tool_list']:
+                dict_output = {}
+                dict_output['key'] = tool_lists
+                synapse.output = dict_output
+                return synapse
+            
             interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['minerId']})
-            print(":::::::::::::::::interpreter_tool_response::::::::::::::::", interpreter_tool_response)
-            return synapse
+            synapse.output = interpreter_tool_response
+            return synapse.output
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
+            return {"Error": "Something went wrong in forward method of miner", 'status': 500}
 
     def interprter_agent_request(self, synapse):
             if synapse['status']:
@@ -87,18 +82,14 @@ class Miner(BaseMinerNeuron):
         try:
             portId = miner_tools[minerId]
             URL = BASE_URL + str(portId) + '/api/alive'
-            print("URL:::::::", URL)
             check_tool_status = request_handler.request_handler_get(URL)
-            print(":::::::::::check_tool_status::::::::::::::", check_tool_status)
             return check_tool_status
         except Exception as e: 
             print('Something went wrong in isAlive method', e) 
     # print(check_tool_status['alive'])
 
     def main(self, model, query, summary=False):
-        print("::::::::MODEL::::::::::::", model)
         if model == '1001':
-            print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
             interpreter_tool(query)
         else :
             return {'result': 'Model does not exist'}
@@ -190,34 +181,3 @@ if __name__ == "__main__":
             bt.logging.info("Miner running...", time.time())
             time.sleep(5)
 
-
-
-
-# TODO(developer): Replace with actual implementation logic.
-            # print(":::::::::::::::::synapse.dummy_input:::::::::::::::: ", synapse.dummy_input)
-            # api_url = "https://openai.ru9.workers.dev/v1/chat/completions"
-            # headers = {
-            #            "Content-Type": "application/json" }
-            # payload = {
-            #     "model": "gpt-4",
-            #     "messages": [
-            #         {"role": "system", "content": """You are a python project planner who when given a Input you will
-            #         - First Read and understand the request to see if its relevant to python execution
-            #         - Understand the request data and create a plan for the developer
-            #         - If its not related to plan anything just say "Null" or give a reply "Null" 
-            #         - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
-            #         - If you fully satisfied with the previous response, then just say "End_Conversation" """},
-            #         {"role": "user", "content": synapse.dummy_input},
-            #     ],
-            # }
-            # bt.logging.info('Payload for GPT: ', payload)
-            # bt.logging.info(f"Synapse: {synapse}")
-            # async with aiohttp.ClientSession() as session:
-            #     async with session.post(api_url, headers=headers, json=payload) as response:
-            #         if response.status == 200:
-            #             data_response  = await response.json()
-            #             print("::::::::::::data")
-            #             synapse.dummy_output = data_response["choices"][0]["message"]["content"]
-            #         else:
-            #             # Handle errors, you might want to log or raise an exception
-            #             print(f"Error: {response.status}, {await response.text()}")

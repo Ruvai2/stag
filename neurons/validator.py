@@ -70,7 +70,7 @@ class Validator(BaseValidatorNeuron):
         # synapse = template.protocol.Dummy(dummy_input=self.step)
         
         bt.logging.info("Creating synapse query", response)
-        self.query = response['query']
+        self.query = response
         bt.logging.info("synapse query: ", self.query)
         query_response = await forward(self)
         return query_response
@@ -100,8 +100,17 @@ async def miner_response(request: web.Request):
         response = await request.json()
         
         bt.logging.info(f"Received query request. {response}")
-        # return web.json_response(await webapp.validator.forward(response))
+        return web.json_response(await webapp.validator.forward(response))
+
+async def get_miner_tool_list(request: web.Request):
+        """
+        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+        """
+        response = await request.json()
+        
+        bt.logging.info(f"Received query request. {response}")
+        return web.json_response(await webapp.validator.forward(response))
 
 webapp = WebApp(Validator())
-webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response)])
+webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response), web.post('/tool_list', get_miner_tool_list)])
 web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())

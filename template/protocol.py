@@ -64,11 +64,14 @@ class InterpreterRequests(bt.Synapse):
         title="Pipeline Parameters",
         description="Additional generating params",
     )
-    # status:bool
-    # minerId:str
+    output:Optional[dict] = pydantic.Field(
+        default={},
+        title="output",
+        description="This returns the end result of the synapse process.",
+    )
 
     def deserialize(self) -> "InterpreterRequests":
-        return self
+        return self.output
 
     
     # query: str = pydantic.Field(
