@@ -27,17 +27,13 @@ import template
 
 # import base miner class which takes care of most of the boilerplate
 from template.base.miner import BaseMinerNeuron
-from utils import request_handler
+from utils import request_handler, miner_ports_ids_mapping, contants
 # from tools.open_ai import open_ai_main
 from tools.interpreter_agent import interpreter_tool
 from tools.tools_list import tool_lists
 # from tools.interpreter_agent import self_operating_computer
 
-miner_tools = {
-        '1001': 8000,
-        '1002' : 3000 
-    }
-BASE_URL = "http://127.0.0.1:"    
+BASE_URL = contants.BASE_URL
 
 class Miner(BaseMinerNeuron):
     """
@@ -59,42 +55,47 @@ class Miner(BaseMinerNeuron):
         self, synapse: template.protocol.InterpreterRequests
     )-> template.protocol.InterpreterRequests:
         try:
-            if synapse.query['query']['is_tool_list']:
+            if 'is_tool_list' in synapse.query['query'] and synapse.query['query']['is_tool_list'] == True:
                 dict_output = {}
                 dict_output['key'] = tool_lists
                 synapse.output = dict_output
                 return synapse
             
-            interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['status'], "minerId": synapse.query['minerId']})
+            interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "minerId": synapse.query['query']['minerId'], "summary": synapse.query['query']['summary']})
             synapse.output = interpreter_tool_response
-            return synapse.output
+            return synapse
         except Exception as e:
             print(f"Error:::::::::::::::::::::;", e)
             return {"Error": "Something went wrong in forward method of miner", 'status': 500}
 
-    def interprter_agent_request(self, synapse):
-            if synapse['status']:
-                return self.isAlive(synapse['minerId'])
-            else:    
-                return self.main(synapse['minerId'], synapse['query'])
-
-    def isAlive(self,minerId):
+    def interpreter_agent_request(self, synapse):
         try:
-            portId = miner_tools[minerId]
-            URL = BASE_URL + str(portId) + '/api/alive'
+            miner_ports_ids_mapping.get_miner_port(synapse['minerId'])
+            portId = str(miner_ports_ids_mapping.miner_port_mappings.get(synapse['minerId'], None))
+            if not portId:
+                return {'result': 'Miner does not exist'}
+            
+            if synapse['status']:
+                return self.isAlive(portId)
+            else:    
+
+                return self.interpreter_main(synapse['query'], portId, synapse['summary'])
+        except Exception as e:
+            print(f"::::Error in interprter_agent_request::::;", e)
+
+    def isAlive(self,portId):
+        try:
+            URL = BASE_URL + portId + '/api/alive'
             check_tool_status = request_handler.request_handler_get(URL)
             return check_tool_status
         except Exception as e: 
-            print('Something went wrong in isAlive method', e) 
-    # print(check_tool_status['alive'])
+            print(f"::::Error in isAlive::::", e) 
 
-    def main(self, model, query, summary=False):
-        if model == '1001':
-            interpreter_tool(query)
-        else :
-            return {'result': 'Model does not exist'}
-
-        
+    def interpreter_main(self, query, portId, summary = False):
+        try:
+            interpreter_tool(query, summary, portId)
+        except Exception as e:
+            print(f"::::Error in main::::", e)
     
     async def blacklist(
         self, synapse: template.protocol.InterpreterRequests
@@ -180,4 +181,3 @@ if __name__ == "__main__":
         while True:
             bt.logging.info("Miner running...", time.time())
             time.sleep(5)
-

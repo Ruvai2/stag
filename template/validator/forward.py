@@ -39,6 +39,10 @@ async def forward(self):
     # get_random_uids is an example method, but you can replace it with your own.
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
 
+    # The dendrite client queries the network.
+    print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
+    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    # self.problem_statement = "Create a program of Addition in python."
     try:
         responses = self.dendrite.query(
             axons=[self.metagraph.axons[11]],
