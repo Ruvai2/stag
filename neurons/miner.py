@@ -27,17 +27,13 @@ import template
 
 # import base miner class which takes care of most of the boilerplate
 from template.base.miner import BaseMinerNeuron
-from utils import request_handler
+from utils import request_handler, miner_ports_ids_mapping, contants
 # from tools.open_ai import open_ai_main
 from tools.interpreter_agent import interpreter_tool
+from tools.tools_list import tool_lists
 # from tools.interpreter_agent import self_operating_computer
 
-miner_tools = {
-        "1003": 8000,
-        "1004" : 8000 
-    }
-
-BASE_URL = "http://127.0.0.1:"    
+BASE_URL = contants.BASE_URL
 
 class Miner(BaseMinerNeuron):
     """
@@ -48,6 +44,8 @@ class Miner(BaseMinerNeuron):
     This class provides reasonable default behavior for a miner such as blacklisting unrecognized hotkeys, prioritizing requests based on stake, and forwarding requests to the forward function. If you need to define custom
     """
 
+
+
     def __init__(self, config=None):
         super(Miner, self).__init__(config=config)
 
@@ -55,57 +53,49 @@ class Miner(BaseMinerNeuron):
 
     async def forward(
         self, synapse: template.protocol.InterpreterRequests
-    ):
+    )-> template.protocol.InterpreterRequests:
         try:
-            print(":::::::inside the miner:::::::::::")
-            if synapse.query['request_type'] == "CHECK_TOOL_ALIVE":
-                interpreter_tool_response = self.interprter_agent_request({"status": synapse.query['status'], "toolId": synapse.query['toolId'], "minerId": synapse.query['minerId']})
-                synapse.agent_output = interpreter_tool_response
-            elif synapse.query['request_type'] == "PING_MINER":
-                synapse.agent_output = {"message": "PONG"}
-            elif synapse.query['request_type'] == "QUERY_MINER":
-                print("::::::synapse.query::::::",synapse.query)
-                interpreter_tool_response = self.interprter_agent_request({"query": synapse.query['query'], "status": synapse.query['agent']['alive'], "toolId": synapse.query['agent']['toolId']})
-                synapse.agent_output = interpreter_tool_response
+            if 'is_tool_list' in synapse.query['query'] and synapse.query['query']['is_tool_list'] == True:
+                dict_output = {}
+                dict_output['key'] = tool_lists
+                synapse.output = dict_output
+                return synapse
+            
+            interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "minerId": synapse.query['query']['minerId'], "summary": synapse.query['query']['summary']})
+            synapse.output = interpreter_tool_response
             return synapse
         except Exception as e:
-            print(f"Error:::::::forward::::::::::::::;", e)
-        
-    def interprter_agent_request(self, synapse):
+            print(f"Error:::::::::::::::::::::;", e)
+            return {"Error": "Something went wrong in forward method of miner", 'status': 500}
+
+    def interpreter_agent_request(self, synapse):
         try:
-            print("::::::::::::::INSIDE_THE_interprter_agent_request_METHOD::::::::::::::::::", synapse)
-            print("==========",synapse["status"])
+            miner_ports_ids_mapping.get_miner_port(synapse['minerId'])
+            portId = str(miner_ports_ids_mapping.miner_port_mappings.get(synapse['minerId'], None))
+            if not portId:
+                return {'result': 'Miner does not exist'}
+            
             if synapse['status']:
-                return self.isAlive(synapse['toolId'], synapse['minerId'])
+                return self.isAlive(portId)
             else:    
-                return self.main(synapse['toolId'], synapse['query'])
+
+                return self.interpreter_main(synapse['query'], portId, synapse['summary'])
         except Exception as e:
-            print(f"Error::::::::interprter_agent_request::::::;", e)
+            print(f"::::Error in interprter_agent_request::::;", e)
 
-    def isAlive(self,toolId, minerId):
+    def isAlive(self,portId):
         try:
-            print("::::::::::::::INSIDE_THE_isAlivet_METHOD::::::::::::::::::", toolId)
-            portId = miner_tools[toolId]
-            URL = BASE_URL + str(portId) + '/api/alive'
-            print("URL:::::::", URL)
+            URL = BASE_URL + portId + '/api/alive'
             check_tool_status = request_handler.request_handler_get(URL)
-            return {'alive': check_tool_status['alive'], 'toolId': toolId, 'minerId': minerId}
+            return check_tool_status
         except Exception as e: 
-            print('Something went wrong in isAlive method', e) 
-    # print(check_tool_status['alive'])
+            print(f"::::Error in isAlive::::", e) 
 
-    def main(self, model, query, summary=False):
+    def interpreter_main(self, query, portId, summary = False):
         try:
-            print("::::::::MODEL::::::::::::", model)
-            if model == '1004':
-                print("::::::::::::::::MAKING_REQUEST_TO_INTERPRETER_TOOL:::::::::::::::")
-                interpreter_tool(query)
-                return {'key': 'INTERPRETER_PROCESSING'}
-            else :
-                return {'key': 'Model does not exist'}
-        except Exception as e: 
-            print(f"Error::::::::main::::::;", e)
-        
+            interpreter_tool(query, summary, portId)
+        except Exception as e:
+            print(f"::::Error in main::::", e)
     
     async def blacklist(
         self, synapse: template.protocol.InterpreterRequests
@@ -191,35 +181,3 @@ if __name__ == "__main__":
         while True:
             bt.logging.info("Miner running...", time.time())
             time.sleep(5)
-
-
-
-
-# TODO(developer): Replace with actual implementation logic.
-            # print(":::::::::::::::::synapse.dummy_input:::::::::::::::: ", synapse.dummy_input)
-            # api_url = "https://openai.ru9.workers.dev/v1/chat/completions"
-            # headers = {
-            #            "Content-Type": "application/json" }
-            # payload = {
-            #     "model": "gpt-4",
-            #     "messages": [
-            #         {"role": "system", "content": """You are a python project planner who when given a Input you will
-            #         - First Read and understand the request to see if its relevant to python execution
-            #         - Understand the request data and create a plan for the developer
-            #         - If its not related to plan anything just say "Null" or give a reply "Null" 
-            #         - Once you think the task as completed, Give response 'End_Conversation' and nothing else.
-            #         - If you fully satisfied with the previous response, then just say "End_Conversation" """},
-            #         {"role": "user", "content": synapse.dummy_input},
-            #     ],
-            # }
-            # bt.logging.info('Payload for GPT: ', payload)
-            # bt.logging.info(f"Synapse: {synapse}")
-            # async with aiohttp.ClientSession() as session:
-            #     async with session.post(api_url, headers=headers, json=payload) as response:
-            #         if response.status == 200:
-            #             data_response  = await response.json()
-            #             print("::::::::::::data")
-            #             synapse.dummy_output = data_response["choices"][0]["message"]["content"]
-            #         else:
-            #             # Handle errors, you might want to log or raise an exception
-            #             print(f"Error: {response.status}, {await response.text()}")

@@ -61,77 +61,20 @@ async def forward(self):
     # TODO(developer): Define how the validator selects a miner to query, how often, etc.
     # get_random_uids is an example method, but you can replace it with your own.
     # miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
-    bt.logging.debug(":::::::::::::::self.request_type:::::::::::::::::",self.request_type)
-    if self.request_type == "PING_MINER":
-        print(":::::::self.query::forward::::::::",self.query)
+
+    # The dendrite client queries the network.
+    print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
+    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    # self.problem_statement = "Create a program of Addition in python."
+    try:
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[self.query["minerId"]]],
+            axons=[self.metagraph.axons[11]],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
-        # Log the results for monitoring purposes.
-        bt.logging.info(f"Received responses: {responses}") 
         return responses
-    elif self.request_type == "CHECK_TOOL_ALIVE":
-        try:
-
-            print("::CHECK_TOOL_ALIVE:::")
-            # print(":::::self.query::::::",self.query)
-            print(":::::self::::::",self)
-            
-            print(":::::::self.query::forward::::::::",self.query)
-            responses = self.dendrite.query(
-                axons=[self.metagraph.axons[self.query["minerId"]]],
-                synapse=InterpreterRequests(query=self.query),
-                deserialize=True,
-            )
-            print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
-            return responses
-        except Exception as e:
-            print(":::::Error while sending dendrite:::::::",e)
-    elif self.request_type == "QUERY_MINER":
-        try:
-            print("::QUERY_MINER:::")
-            print(":::::::self.query::forward::::::::",self.query)
-            responses = self.dendrite.query(
-                axons=[self.metagraph.axons[self.query["agent"]["minerId"]]],
-                synapse=InterpreterRequests(query=self.query),
-                deserialize=True,
-            )
-            res_string  = responses[0]
-            if res_string["key"]:
-                self.query_res = res_string
-                await send_res_to_group_chat(self)
-                return
-            elif res_string["alive"]:
-                print(":::::::alive respionse:::::::::")
-        except Exception as e:
-            print(":::::Error while sending dendrite:::::::",e)
-    else:
-        # The dendrite client queries the network.
-        bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
-        bt.logging.info("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
-        bt.logging.info("::::::::::::::SELF.AGENT::::::::::::::::::",self.query["agent"]["uid"])
-        try:
-            responses = self.dendrite.query(
-                axons=[self.metagraph.axons[self.query["agent"]["uid"]]],
-                synapse=InterpreterRequests(query=self.query),
-                deserialize=True,
-            )
-        except Exception as e:
-            print(":::::Error while sending dendrite:::::::",e)
-
-        print(":::::::::::RESPONSE::::FORWARD::::::::::::",responses)
-    # res_string  = responses[0]
-    # if res_string == None:  res_string = "NULL"
-    # async with aiohttp.ClientSession() as session:
-    #                     async with session.post("http://localhost:8000/api/send_update_after_processing",headers = { "Content-Type": "application/json"}, json={"key" : res_string}) as response:
-    #                         if response.status == 200:
-    #                             print("Successfully called the group chat:::::")
-    #                         else:
-    #                             # Handle errors, you might want to log or raise an exception
-    #                             print(f"Error: {response.status}, {await response.text()}")
-    #                             print("Failed to called the group chat:::::")
+    except Exception as e:
+        print(":::::Error while sending dendrite:::::::",e)
     # print(":::::::::::responses:::::::::",responses)
     # Log the results for monitoring purposes.
     # bt.logging.info(f"Received responses: {responses}")

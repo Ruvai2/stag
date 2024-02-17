@@ -68,14 +68,14 @@ class InterpreterRequests(bt.Synapse):
         title="Pipeline Parameters",
         description="Additional generating params",
     )
-    # isToolList: bool = pydantic.Field(
-    #     ..., title="isToolList", description="Whether to generate a summary or not", value = False
-    # )
-    # status:bool
-    # minerId:str
+    output:Optional[dict] = pydantic.Field(
+        default={},
+        title="output",
+        description="This returns the end result of the synapse process.",
+    )
 
     def deserialize(self) -> "InterpreterRequests":
-        return self.agent_output
+        return self.output
 
 class PingMiner(bt.Synapse):
     """
