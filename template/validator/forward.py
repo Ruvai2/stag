@@ -68,7 +68,7 @@ async def forward(self):
     # self.problem_statement = "Create a program of Addition in python."
     try:
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[6]],
+            axons=[self.metagraph.axons[self.query['query']['minerId']]],
             # axons=[self.metagraph.axons[self.minerId]],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
