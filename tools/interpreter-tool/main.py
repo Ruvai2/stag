@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-open_intepreter_path = os.getenv("OPEN_INTERPRETER_PATH")
+open_intepreter_path = '/Users/w3villa/Daasi/open-interpreter'
 import sys
 sys.path.append(open_intepreter_path)
 from fastapi import FastAPI

@@ -30,7 +30,7 @@ from template.utils.misc import convert_text_to_vector, insert_vector_into_db, g
 
 # Bittensor Validator Template:
 import template
-from template.validator import forward
+from template.validator import forward,send_res_to_group_chat
 
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
@@ -75,12 +75,20 @@ class Validator(BaseValidatorNeuron):
         # {'query': None, 'agent': {'uid': 6, 'tool': 1002}}
         bt.logging.info("Creating synapse query", response)
         self.query = response
+        self.query["request_type"] = "QUERY_MINER"
+        self.request_type = "QUERY_MINER"
         # self.agent = response['agent'] 
         bt.logging.info("synapse query: ", self.query)
         # bt.logging.info("synapse agent: ", self.agent)
         query_response = await forward(self)
         return query_response
     
+    async def interpreter_response(self, response):
+        bt.logging.info("interpreter_response", response)
+        self.query_res = response
+        bt.logging.info("interpreter_response: ", self.query_res)
+        query_response = await send_res_to_group_chat(self)
+        return query_response
     def get_miner_info(self, query_uids: list):
         uid_to_axon = dict(zip(self.all_uids, self.metagraph.axons))
         query_axons = [uid_to_axon[int(uid)] for uid in query_uids]
@@ -108,7 +116,7 @@ class Validator(BaseValidatorNeuron):
             miner_response_list.append(miner_list)
         print("::::::::::::::forward_responses::::::::::::::::::::", miner_response_list)
     
-    async def check_tool_alive(self, miner_uids):
+    async def check_tool_alive(self, miner_uids,group_id):
         """
         Check if the tool is alive.
         """
@@ -120,7 +128,7 @@ class Validator(BaseValidatorNeuron):
                 "toolId": miner['id'],
                 "status": "True",
                 "request_type": "CHECK_TOOL_ALIVE",
-                "groupId": "10011"
+                "groupId": group_id
             }
             tool_status = (await forward(self))[0]
             if len(tool_status.keys()) > 0 and tool_status['alive'] == True:
@@ -133,7 +141,6 @@ async def get_query(request: web.Request):
         Get query request handler. This method handles the incoming requests and returns the response from the forward function.
         """
         response = await request.json()
-        print(":::::response:::::",response)
         bt.logging.info(f"Received query request. {response}")
         # print(":::web.json_response(await webapp.validator.forward(response)):::",web.json_response(await webapp.validator.forward(response)))
         return web.json_response(await webapp.validator.forward(response))
@@ -145,7 +152,7 @@ async def miner_response(request: web.Request):
         response = await request.json()
         
         bt.logging.info(f"Received query request. {response}")
-        # return web.json_response(await webapp.validator.forward(response))
+        return web.json_response(await webapp.validator.interpreter_response(response))
     
 async def save_miner_info(request: web.Request):
     """
@@ -227,10 +234,9 @@ async def request_for_miner(request: web.Request):
     if len(embedded_text['vectorizedChunks']):
         chunk = embedded_text['vectorizedChunks'][0]
         miner_tools_info = (await get_vector_from_db(chunk['vector']))['matches']['matches']
-    print("::::::::::::::miner_tools_info::::::::::::::::::::", miner_tools_info)
+    bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
     # check if the tool is alive
-    print(":::::WORKING_TILL_NOW::::::")
-    alive_tools = await webapp.validator.check_tool_alive(miner_tools_info)
+    alive_tools = await webapp.validator.check_tool_alive(miner_tools_info,response["group_id"])
     bt.logging.info(f"Alive Tools: {alive_tools}")
     
     
