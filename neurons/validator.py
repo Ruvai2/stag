@@ -74,25 +74,57 @@ class Validator(BaseValidatorNeuron):
         # synapse = template.protocol.Dummy(dummy_input=self.step)
         # {'query': None, 'agent': {'uid': 6, 'tool': 1002}}
         bt.logging.info("Creating synapse query", response)
-        self.query = response
-        self.query["request_type"] = "QUERY_MINER"
-        self.request_type = "QUERY_MINER"
+        # self.query = response
+        # self.query["request_type"] = "QUERY_MINER"
+        # self.request_type = "QUERY_MINER"
+        # {'query': 'add 2 and 3', 'agent': {'alive': False, 'tool_Id': '1004', 'minerId': 6, 'groupId': 5151}}
+        self.query = {"query":{
+                    "query":  response['query'],
+                    "summary": False,
+                    "minerId": response['agent']['minerId'],
+                    "status": False,
+                    "tool_Id": response['agent']['tool_Id'],
+                }
+            }
         # self.agent = response['agent'] 
         bt.logging.info("synapse query: ", self.query)
         # bt.logging.info("synapse agent: ", self.agent)
         query_response = await forward(self)
         return query_response
     
+    async def send_res_to_group_chat_copy(self):
+        try:
+            print("::::::::send_res_to_group_chat::::::",self.query)
+
+            # while self.query_res["key"] == "INTERPRETER_PROCESSING":
+            #     # Wait until the key becomes "INTEPRETR_PROGESS"
+            #     print("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
+            #     await asyncio.sleep(1)
+            print(":::::::::::self.query::::::",self.query)
+            async with aiohttp.ClientSession() as session:
+                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
+                    if response.status == 200:
+                        print("Successfully called the group chat:::::")
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
+                        print("Failed to call the group chat:::::")
+            return "Successfully called the group chat:::::"
+        except Exception as e:
+            print(":::::Error send_res_to_group_chat:::::::", e)
+
     async def interpreter_response(self, response):
         bt.logging.info("interpreter_response", response)
         self.query_res = response
         bt.logging.info("interpreter_response: ", self.query_res)
         query_response = await send_res_to_group_chat(self)
         return query_response
+
+
     def get_miner_info(self, query_uids: list):
         uid_to_axon = dict(zip(self.all_uids, self.metagraph.axons))
         query_axons = [uid_to_axon[int(uid)] for uid in query_uids]
         return query_axons
+
 
     def get_valid_miners_info(self):
         self.all_uids = [int(uid) for uid in self.metagraph.uids]
@@ -123,17 +155,28 @@ class Validator(BaseValidatorNeuron):
         alive_tools = []
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
-            self.query = {
-                "minerId": miner['metadata']['uid'],
-                "toolId": miner['id'],
-                "status": "True",
-                "request_type": "CHECK_TOOL_ALIVE",
-                "groupId": group_id
+            self.query = {"query":{
+                    "query": "sum of two numbers",
+                    "summary": False,
+                    "minerId": miner['metadata']['uid'],
+                    "status": True,
+                    "tool_Id": miner['id'],
+                }
             }
+
+            # self.query = {
+            #     "minerId": miner['metadata']['uid'],
+            #     "toolId": miner['id'],
+            #     "status": "True",
+            #     "request_type": "CHECK_TOOL_ALIVE",
+            #     "groupId": group_id
+            # }
             tool_status = (await forward(self))[0]
-            if len(tool_status.keys()) > 0 and tool_status['alive'] == True:
-                tool_status['groupId'] = self.query['groupId']
+            print(":::::::::tool_status:::::::::::",tool_status)
+            if tool_status and 'alive' in tool_status and tool_status['alive'] == True:
+                tool_status['groupId'] = group_id
                 alive_tools.append(tool_status)
+            print("::::::::::::::::alive_tools::::::::::::",alive_tools)
         return alive_tools
         
 async def get_query(request: web.Request):
@@ -184,8 +227,8 @@ def get_unique_miner_ids(data):
     result = []
     
     for item in data:
-        if 'minerId' in item:
-            miner_id = item['minerId']
+        if 'groupId' in item:
+            miner_id = item['groupId']
             if miner_id not in unique_miner_ids:
                 unique_miner_ids.add(miner_id)
                 result.append(item)
@@ -262,6 +305,15 @@ class WebApp(web.Application):
         super().__init__()
         self.validator = validator
 
+
+async def get_miner_tool_list(request: web.Request):
+        """
+        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+        """
+        response = await request.json()
+        
+        bt.logging.info(f"Received query request. {response}")
+        return web.json_response(await webapp.validator.forward(response))
 webapp = WebApp(Validator())
 webapp.add_routes([
     web.post('/forward', get_query),
@@ -282,15 +334,6 @@ async def miner_response(request: web.Request):
         bt.logging.info(f"Received query request. {response}")
         return web.json_response(await webapp.validator.forward(response))
 
-async def get_miner_tool_list(request: web.Request):
-        """
-        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
-        """
-        response = await request.json()
-        
-        bt.logging.info(f"Received query request. {response}")
-        return web.json_response(await webapp.validator.forward(response))
-
 webapp = WebApp(Validator())
 # webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response), web.post('/tool_list', get_miner_tool_list)])
-web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())
+# web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())

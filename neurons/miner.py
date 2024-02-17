@@ -55,13 +55,15 @@ class Miner(BaseMinerNeuron):
         self, synapse: template.protocol.InterpreterRequests
     )-> template.protocol.InterpreterRequests:
         try:
+            print(":::::::MINER::::::::::::", synapse.query)
+            # {'query': {'minerId': 6, 'status': True, 'tool_Id': '1004'}}
             if 'is_tool_list' in synapse.query['query'] and synapse.query['query']['is_tool_list'] == True:
                 dict_output = {}
                 dict_output['key'] = tool_lists
                 synapse.output = dict_output
                 return synapse
             
-            interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "tool_Id": synapse.query['query']['tool_Id'], "summary": synapse.query['query']['summary']})
+            interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "tool_Id": synapse.query['query']['tool_Id'], "summary": synapse.query['query']['summary'],"minerId": synapse.query['query']['minerId']})
             synapse.output = interpreter_tool_response
             return synapse
         except Exception as e:
@@ -76,17 +78,19 @@ class Miner(BaseMinerNeuron):
                 return {'result': 'Miner does not exist'}
             
             if synapse['status']:
-                return self.isAlive(portId)
+                return self.isAlive(portId,synapse)
             else:    
 
                 return self.interpreter_main(synapse['query'], portId, synapse['summary'])
         except Exception as e:
             print(f"::::Error in interprter_agent_request::::;", e)
 
-    def isAlive(self,portId):
+    def isAlive(self,portId,synapse):
         try:
             URL = BASE_URL + portId + '/api/alive'
             check_tool_status = request_handler.request_handler_get(URL)
+            check_tool_status['tool_Id'] = synapse['tool_Id']
+            check_tool_status['minerId'] = synapse['minerId']
             return check_tool_status
         except Exception as e: 
             print(f"::::Error in isAlive::::", e) 
@@ -94,6 +98,7 @@ class Miner(BaseMinerNeuron):
     def interpreter_main(self, query, portId, summary = False):
         try:
             interpreter_tool(query, summary, portId)
+            return {'key': 'INTERPRETER_PROCESSING'}
         except Exception as e:
             print(f"::::Error in main::::", e)
     

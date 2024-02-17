@@ -19,7 +19,7 @@ from websocket_client import main
 # start_websocket_client("Hy, i'm chat box")
 # port 8000
 app = FastAPI()
-INTERPRETER_URL = "http://127.0.0.1:9001/api/interpreter"
+INTERPRETER_URL = "http://127.0.0.1:9000/api/interpreter"
 
 def openai_chat(chat_detail):
     """

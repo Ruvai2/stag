@@ -33,7 +33,7 @@ async def send_res_to_group_chat(self):
         while self.query_res["key"] == "INTERPRETER_PROCESSING":
             # Wait until the key becomes "INTEPRETR_PROGESS"
             print("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
-            await asyncio.sleep(1)
+            await asyncio.sleep(10)
         async with aiohttp.ClientSession() as session:
             async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
                 if response.status == 200:
@@ -64,15 +64,22 @@ async def forward(self):
 
     # The dendrite client queries the network.
     print("::::::::::::::SELF.QUERY::::::::::::::::::", type(self.query))
-    print("::::::::::::::SELF.QUERY::::::::::::::::::", self.query)
+    print("::::::::::::::SELF.QUERY::::::::::::::::::FORWARD::::", self.query)
     # self.problem_statement = "Create a program of Addition in python."
     try:
         responses = self.dendrite.query(
-            axons=[self.metagraph.axons[11]],
+            axons=[self.metagraph.axons[6]],
+            # axons=[self.metagraph.axons[self.minerId]],
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
-        return responses
+        res_string  = responses[0]
+        if res_string and 'key' in res_string and res_string['key'] == 'INTERPRETER_PROCESSING':
+            self.query_res = res_string
+            await send_res_to_group_chat(self)
+            return
+        else:
+            return responses
     except Exception as e:
         print(":::::Error while sending dendrite:::::::",e)
     # print(":::::::::::responses:::::::::",responses)
