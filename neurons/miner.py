@@ -61,7 +61,7 @@ class Miner(BaseMinerNeuron):
                 synapse.output = dict_output
                 return synapse
             
-            interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "minerId": synapse.query['query']['minerId'], "summary": synapse.query['query']['summary']})
+            interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "tool_Id": synapse.query['query']['tool_Id'], "summary": synapse.query['query']['summary']})
             synapse.output = interpreter_tool_response
             return synapse
         except Exception as e:
@@ -70,8 +70,8 @@ class Miner(BaseMinerNeuron):
 
     def interpreter_agent_request(self, synapse):
         try:
-            miner_ports_ids_mapping.get_miner_port(synapse['minerId'])
-            portId = str(miner_ports_ids_mapping.miner_port_mappings.get(synapse['minerId'], None))
+            miner_ports_ids_mapping.get_miner_port(synapse['tool_Id'])
+            portId = str(miner_ports_ids_mapping.miner_port_mappings.get(synapse['tool_Id'], None))
             if not portId:
                 return {'result': 'Miner does not exist'}
             
