@@ -31,7 +31,7 @@ from template.utils.misc import convert_text_to_vector, insert_vector_into_db, g
 # Bittensor Validator Template:
 import template
 from template.validator import forward,send_res_to_group_chat
-
+from template.utils import util
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
 from template.protocol import PingMiner
@@ -153,7 +153,7 @@ class Validator(BaseValidatorNeuron):
         Check if the tool is alive.
         """
         print(":::::::::miner_uids:::::::::::",miner_uids)
-        alive_tools = []
+        res_tools_list = []
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
             self.query = {"query":{
@@ -170,15 +170,32 @@ class Validator(BaseValidatorNeuron):
             print(":::::::::tool_status:::::::::::",tool_status)
             if tool_status and 'alive' in tool_status and tool_status['alive'] == True:
                 tool_status['groupId'] = group_id
-                alive_tools.append(tool_status)
-            print("::::::::::::::::alive_tools::::::::::::",alive_tools)
-        return alive_tools
+                tool_status['agent_id'] = await util.generate_unique_4_digit_integer()
+                res_tools_list.append({'groupId':tool_status['groupId'],'agent_id':tool_status['agent_id']})
+                add_object(tool_status['groupId'], tool_status)
+            print("::::::::::::::::res_tools_list::::::::::::",res_tools_list)
+        return res_tools_list
     
 async def get_query(request: web.Request):
         """
         Get query request handler. This method handles the incoming requests and returns the response from the forward function.
         """
         response = await request.json()
+        global global_object
+        # {
+        # 3473: [{'alive': True, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3473, 'agent_id': 2856}],
+        # 3474: [{'alive': True, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3474, 'agent_id': 2856}],
+        # 3475: [{'alive': True, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3475, 'agent_id': 2857}]
+        # 
+        # }
+        # Received query request. {'query': 'Add 2 and 3', 'agent': {'alive': False, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3473, 'agent_id': 2856}
+        fetch_group_data = util.get_object_by_group_and_agent(global_object,response['agent']['groupId'],response['agent']['agent_id'])
+        if fetch_group_data is None:
+            return web.json_response({"message": "Agent not found"})
+        response['agent']['tool_Id'] = fetch_group_data['tool_Id']
+        response['agent']['minerId'] = fetch_group_data['minerId']
+        response['agent']['alive']  = False
+        print("::::::::::::::::::::",global_object)
         bt.logging.info(f"Received query request. {response}")
         # print(":::web.json_response(await webapp.validator.forward(response)):::",web.json_response(await webapp.validator.forward(response)))
         return web.json_response(await webapp.validator.forward(response))
@@ -255,10 +272,8 @@ async def request_for_miner(request: web.Request):
     
     # get the unique miner ids
     if len(alive_tools):
-        unique_miners_details = get_unique_miner_ids(alive_tools)[0]
-        print("::::::::::::::unique_miners_details::::::::::::::::::::", unique_miners_details)
-        add_object(unique_miners_details['groupId'], unique_miners_details)
-        print("::::::::::::::unique_miners_details::::::::::::::::::::", global_object)
+        unique_miners_details = get_unique_miner_ids(alive_tools)
+        print("::::::::::::::1. unique_miners_details::::::::::::::::::::", unique_miners_details)
         return web.json_response(unique_miners_details)
 
 async def delete_miner_tool_info(tool_ids):
