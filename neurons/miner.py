@@ -29,8 +29,9 @@ import template
 from template.base.miner import BaseMinerNeuron
 from utils import request_handler, miner_ports_ids_mapping, contants
 # from tools.open_ai import open_ai_main
-from tools.interpreter_agent import interpreter_tool
+from tools.generic_agent import interpreter_tool, self_operating_request
 from tools.tools_list import tool_lists
+from tool_handler.tool_id_mapping import tool_methods
 # from tools.interpreter_agent import self_operating_computer
 
 BASE_URL = contants.BASE_URL
@@ -63,6 +64,7 @@ class Miner(BaseMinerNeuron):
                 synapse.output = dict_output
                 return synapse
             
+            
             interpreter_tool_response = self.interpreter_agent_request({"query": synapse.query['query']['query'], "status": synapse.query['query']['status'], "tool_Id": synapse.query['query']['tool_Id'], "summary": synapse.query['query']['summary'],"minerId": synapse.query['query']['minerId']})
             synapse.output = interpreter_tool_response
             return synapse
@@ -80,8 +82,7 @@ class Miner(BaseMinerNeuron):
             if synapse['status']:
                 return self.isAlive(portId,synapse)
             else:    
-
-                return self.interpreter_main(synapse['query'], portId, synapse['summary'])
+                return self.interpreter_main(synapse['query'], portId, synapse, synapse['summary'])
         except Exception as e:
             print(f"::::Error in interprter_agent_request::::;", e)
 
@@ -95,9 +96,13 @@ class Miner(BaseMinerNeuron):
         except Exception as e: 
             print(f"::::Error in isAlive::::", e) 
 
-    def interpreter_main(self, query, portId, summary = False):
+    def interpreter_main(self, query, portId, synapse, summary = False ):
         try:
-            interpreter_tool(query, summary, portId)
+            function_name = tool_methods[synapse['tool_Id']]
+            globals()[function_name](query, summary, portId)
+            # tool_methods[synapse['tool_id']](query, summary, portId)
+            # interpreter_tool(query, summary, portId)
+            # self_operating_request(query, summary, portId)
             return {'key': 'INTERPRETER_PROCESSING'}
         except Exception as e:
             print(f"::::Error in main::::", e)
