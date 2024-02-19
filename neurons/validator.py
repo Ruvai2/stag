@@ -26,7 +26,7 @@ import bittensor as bt
 from aiohttp import web
 import aiohttp
 import asyncio
-from template.utils.misc import convert_text_to_vector, insert_vector_into_db, get_vector_from_db
+from template.utils.misc import convert_text_to_vector, insert_vector_into_db, get_vector_from_db, delete_vector_from_db
 
 # Bittensor Validator Template:
 import template
@@ -79,13 +79,14 @@ class Validator(BaseValidatorNeuron):
         # self.request_type = "QUERY_MINER"
         # {'query': 'add 2 and 3', 'agent': {'alive': False, 'tool_Id': '1004', 'minerId': 6, 'groupId': 5151}}
         self.query = {"query":{
-                    "query":  response['query'],
-                    "summary": False,
-                    "minerId": response['agent']['minerId'],
-                    "status": False,
-                    "tool_Id": response['agent']['tool_Id'],
-                }
+                "query":  response['query'],
+                "summary": False,
+                "minerId": response['agent']['minerId'],
+                "status": False,
+                "tool_Id": response['agent']['tool_Id'],
+                "is_tool_list": False,
             }
+        }
         # self.agent = response['agent'] 
         bt.logging.info("synapse query: ", self.query)
         # bt.logging.info("synapse agent: ", self.agent)
@@ -130,28 +131,28 @@ class Validator(BaseValidatorNeuron):
         self.all_uids = [int(uid) for uid in self.metagraph.uids]
         # valid_miners_info = self.get_miner_info(self.all_uids)
         return self.all_uids
-
-    async def ping_miner(self, isToolList):
+    
+    async def is_tool_alive(self, miner_id, tool_id):
         """
-        Send a query to a miner and get the response.
+        Check if the tool is alive.
         """
-        print(":::::::::::::: Inside ping_miner_and_get_response :::::::::::::::::::", self.get_valid_miners_info())
-        miner_response_list = []
-        self.request_type = "PING_MINER"
-        for miner in self.get_valid_miners_info():
-            self.query ={
-                "minerId": miner,
-                "isToolList": isToolList,
-                "request_type": "PING_MINER",
+        self.query = {"query":{
+                "query": "sum of two numbers",
+                "summary": False,
+                "minerId": miner_id,
+                "status": True,
+                "tool_Id": tool_id,
+                "is_tool_list": False,
             }
-            miner_list = await forward(self)
-            miner_response_list.append(miner_list)
-        print("::::::::::::::forward_responses::::::::::::::::::::", miner_response_list)
+        }
+        tool_status = await forward(self)
+        return tool_status
     
     async def check_tool_alive(self, miner_uids,group_id):
         """
         Check if the tool is alive.
         """
+        print(":::::::::miner_uids:::::::::::",miner_uids)
         alive_tools = []
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
@@ -160,17 +161,11 @@ class Validator(BaseValidatorNeuron):
                     "summary": False,
                     "minerId": miner['metadata']['uid'],
                     "status": True,
-                    "tool_Id": miner['id'],
+                    "tool_Id": miner['metadata']['toolId'],
+                    "is_tool_list": False,
                 }
             }
 
-            # self.query = {
-            #     "minerId": miner['metadata']['uid'],
-            #     "toolId": miner['id'],
-            #     "status": "True",
-            #     "request_type": "CHECK_TOOL_ALIVE",
-            #     "groupId": group_id
-            # }
             tool_status = (await forward(self))[0]
             print(":::::::::tool_status:::::::::::",tool_status)
             if tool_status and 'alive' in tool_status and tool_status['alive'] == True:
@@ -178,7 +173,7 @@ class Validator(BaseValidatorNeuron):
                 alive_tools.append(tool_status)
             print("::::::::::::::::alive_tools::::::::::::",alive_tools)
         return alive_tools
-        
+    
 async def get_query(request: web.Request):
         """
         Get query request handler. This method handles the incoming requests and returns the response from the forward function.
@@ -197,31 +192,6 @@ async def miner_response(request: web.Request):
         bt.logging.info(f"Received query request. {response}")
         return web.json_response(await webapp.validator.interpreter_response(response))
     
-async def save_miner_info(request: web.Request):
-    """
-    Save miner info request handler. This method handles the incoming requests and saves the miner info.
-    """
-    response = await request.json()
-    print(":::::::::::::: In save miner info :::::::::::::::::::", response)
-    payload = {
-        "account_id": "112233",
-        "chunks": [   
-            {
-                "id": "1",
-                "metadata": {
-                    "context": response['metadata']['tool_summary'],
-                }
-            },
-        ]
-    }
-    
-    bt.logging.info(f"Received save_miner_info request. {payload}")
-    embedded_text = await convert_text_to_vector(payload)
-    if len(embedded_text['vectorizedChunks']):
-        for chunk in embedded_text['vectorizedChunks']:
-            bt.logging.info(f"Chunk: {chunk['vector']}")
-            await insert_vector_into_db(chunk)
-
 def get_unique_miner_ids(data):
     unique_miner_ids = set()
     result = []
@@ -290,12 +260,70 @@ async def request_for_miner(request: web.Request):
         add_object(unique_miners_details['groupId'], unique_miners_details)
         print("::::::::::::::unique_miners_details::::::::::::::::::::", global_object)
         return web.json_response(unique_miners_details)
-        
-async def ping_miners(request: web.Request):
-    # hit the miner with the query every 1 hour
-    await webapp.validator.ping_miner(True)
-    bt.logging.debug(":::::::::::::: Inside main :::::::::::::::::::")
+
+async def delete_miner_tool_info(tool_ids):
+    """
+    Delete miner info request handler. This method handles the incoming requests and deletes the miner info.
+    """
+    res = await delete_vector_from_db(tool_ids)
+    if(res):
+        print("::::::::::::::Data deleted successfully::::::::::::::::::::", res)
+
+async def save_miner_info(alive_tool_list, miner_id):
+    """
+    Save miner info request handler. This method handles the incoming requests and saves the miner info.
+    """
+    
+    data_to_save = []
+    for tool_details in alive_tool_list:
+        print(":::::::::::::: In save miner info :::::::::::::::::::", tool_details)
+        payload = {
+            "account_id": "112233",
+            "chunks": [   
+                {
+                    "id": "1",
+                    "metadata": {
+                        "context": tool_details['summary'],
+                    }
+                },
+            ]
+        }
+        bt.logging.info(f"Received save_miner_info request. {payload}")
+        embedded_text = await convert_text_to_vector(payload)
+        if len(embedded_text['vectorizedChunks']):
+            for chunk in embedded_text['vectorizedChunks']:
+                bt.logging.info(f"Chunk: {chunk}")
+                data_to_save.append({"id": f"{miner_id}-{tool_details['toolId']}", "values": chunk['vector'], "metadata": {"name": tool_details['name'], "uid": miner_id, "toolId": tool_details['toolId']}})
                 
+    print("::::::::::::::data_to_save::::::::::::::::::::", data_to_save) 
+    res = await insert_vector_into_db(data_to_save)
+    if(res):
+        print("::::::::::::::Data saved successfully::::::::::::::::::::", res)
+
+async def get_miner_tool_list(request: web.Request):
+    """
+    Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+    """
+    for miner_id in webapp.validator.get_valid_miners_info():
+        webapp.validator.query ={
+            "query" : {
+                "is_tool_list": True,
+                "minerId": miner_id,
+            }
+        }
+        tool_list = await forward(webapp.validator)
+        if len(tool_list[0].keys()):
+            toolids = [f"{miner_id}-{tool['toolId']}" for tool in tool_list[0]['key']]
+            await delete_miner_tool_info(toolids)
+            alive_tool_list = []
+            for tool in tool_list[0]['key']:
+                alive_tools = await webapp.validator.is_tool_alive(miner_id, tool['toolId'])
+                if alive_tools[0] and 'alive' in alive_tools[0] and alive_tools[0]['alive'] == True:
+                    alive_tool_list.append(tool)
+            await save_miner_info(alive_tool_list, miner_id)
+    else:
+        return "Tool list is saved successfully"       
+
 class WebApp(web.Application):
     """
     Web application for the validator. This class is used to create a web server for the validator.
@@ -304,36 +332,12 @@ class WebApp(web.Application):
     def __init__(self, validator: Validator):
         super().__init__()
         self.validator = validator
-
-
-async def get_miner_tool_list(request: web.Request):
-        """
-        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
-        """
-        response = await request.json()
-        
-        bt.logging.info(f"Received query request. {response}")
-        return web.json_response(await webapp.validator.forward(response))
+    
 webapp = WebApp(Validator())
 webapp.add_routes([
     web.post('/forward', get_query),
     web.post('/webhook', miner_response),
-    web.post('/save_miner_info', save_miner_info),
     web.post('/request_for_miner', request_for_miner),
-    web.post('/ping_miner', ping_miners),
     web.post('/tool_list', get_miner_tool_list)
 ])
 web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
-    
-async def miner_response(request: web.Request):
-        """
-        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
-        """
-        response = await request.json()
-        
-        bt.logging.info(f"Received query request. {response}")
-        return web.json_response(await webapp.validator.forward(response))
-
-webapp = WebApp(Validator())
-# webapp.add_routes([web.post('/forward', get_query), web.post('/webhook', miner_response), web.post('/tool_list', get_miner_tool_list)])
-# web.run_app(webapp, port=9080, loop=asyncio.get_event_loop())

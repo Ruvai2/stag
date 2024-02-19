@@ -131,6 +131,12 @@ async def api_request_handler(**kwargs):
                         return await response.json()
                     else:
                         print(f"Error: {response.status}, {await response.text()}")
+            elif kwargs['method'] == "DELETE":
+                async with session.delete(kwargs['url']) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
     except Exception as e:
         print(f"Error: {e}")
         
@@ -144,7 +150,7 @@ async def convert_text_to_vector(payload):
         
 async def insert_vector_into_db(payload):
     try:
-        vector_insert_url = "https://daasi-vectorize.ru9.workers.dev/"
+        vector_insert_url = "https://daasi-vectorize.ru9.workers.dev/insert"
         response = await api_request_handler(method="POST", url=vector_insert_url, data=payload)
         return response
     except Exception as e:
@@ -152,8 +158,17 @@ async def insert_vector_into_db(payload):
         
 async def get_vector_from_db(query_vector):
     try:
-        vector_get_url =  f"https://daasi-vectorize.ru9.workers.dev/query?queryVector={query_vector}"
-        response = await api_request_handler(method="GET", url=vector_get_url)
+        vector_get_url =  f"https://daasi-vectorize.ru9.workers.dev/query"
+        response = await api_request_handler(method="POST", url=vector_get_url, data={"values": query_vector})
+        return response
+    except Exception as e:
+        print(f"Error: {e}")
+        
+async def delete_vector_from_db(ids):
+    try:
+        joined_ids = ",".join(ids)
+        vector_delete_url =  f"https://daasi-vectorize.ru9.workers.dev/delete?ids={joined_ids}"
+        response = await api_request_handler(method="DELETE", url=vector_delete_url)
         return response
     except Exception as e:
         print(f"Error: {e}")

@@ -57,7 +57,7 @@ class Miner(BaseMinerNeuron):
         try:
             print(":::::::MINER::::::::::::", synapse.query)
             # {'query': {'minerId': 6, 'status': True, 'tool_Id': '1004'}}
-            if 'is_tool_list' in synapse.query['query'] and synapse.query['query']['is_tool_list'] == True:
+            if synapse.query['query']['is_tool_list']:
                 dict_output = {}
                 dict_output['key'] = tool_lists
                 synapse.output = dict_output
