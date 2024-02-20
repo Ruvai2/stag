@@ -1,10 +1,11 @@
-import random
-async def generate_unique_4_digit_integer():
+import uuid
+
+def generate_group_reference_number():
     try:
-        random_integer = random.randint(1000, 9999)
-        return random_integer
+        uuid_reference = uuid.uuid4()
+        return str(uuid_reference)
     except Exception as e:
-        print(f"An unexpected error occurred:::::generate_unique_4_digit_integer::::: {e}")
+        print(f"An unexpected error occurred:::::generate_group_reference_number::::: {e}")
 
 def get_object_by_group_and_agent(global_details, group_id, agent_id):
     try:

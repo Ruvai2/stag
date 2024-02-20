@@ -165,7 +165,7 @@ class Validator(BaseValidatorNeuron):
             print(":::::::::tool_status:::::::::::",tool_status)
             if tool_status and 'alive' in tool_status and tool_status['alive'] == True:
                 tool_status['groupId'] = group_id
-                tool_status['agent_id'] = await util.generate_unique_4_digit_integer()
+                tool_status['agent_id'] = util.generate_group_reference_number()
                 alive_tools_list.append(tool_status)
             print("::::::::::::::::res_tools_list::::::::::::",alive_tools_list)
         return alive_tools_list
