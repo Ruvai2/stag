@@ -50,13 +50,8 @@ class Validator(BaseValidatorNeuron):
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
-
-        bt.logging.info("=====================================> load_state()")
-        bt.logging.info(f":::::::self.axon::::::", self.axon)
-        self.load_state()
-        self.group_miners_association = {}
-
-        # TODO(developer): Anything specific to your use case you can do here   
+        bt.logging.info("Validator neuron initialized")
+        self.load_state() 
     
     async def forward(self, response):
         """
@@ -67,7 +62,6 @@ class Validator(BaseValidatorNeuron):
         - Rewarding the miners
         - Updating the scores
         """
-        # TODO(developer): Rewrite this function based on your protocol definition.
 
         # craete a synapse query
         # bt.logging.info("Creating synapse query", self.step)
@@ -153,7 +147,7 @@ class Validator(BaseValidatorNeuron):
         Check if the tool is alive.
         """
         print(":::::::::miner_uids:::::::::::",miner_uids)
-        res_tools_list = []
+        alive_tools_list = []
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
             self.query = {"query":{
@@ -171,10 +165,9 @@ class Validator(BaseValidatorNeuron):
             if tool_status and 'alive' in tool_status and tool_status['alive'] == True:
                 tool_status['groupId'] = group_id
                 tool_status['agent_id'] = await util.generate_unique_4_digit_integer()
-                res_tools_list.append({'groupId':tool_status['groupId'],'agent_id':tool_status['agent_id']})
-                add_object(tool_status['groupId'], tool_status)
-            print("::::::::::::::::res_tools_list::::::::::::",res_tools_list)
-        return res_tools_list
+                alive_tools_list.append(tool_status)
+            print("::::::::::::::::res_tools_list::::::::::::",alive_tools_list)
+        return alive_tools_list
     
 async def get_query(request: web.Request):
         """
@@ -182,13 +175,6 @@ async def get_query(request: web.Request):
         """
         response = await request.json()
         global global_object
-        # {
-        # 3473: [{'alive': True, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3473, 'agent_id': 2856}],
-        # 3474: [{'alive': True, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3474, 'agent_id': 2856}],
-        # 3475: [{'alive': True, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3475, 'agent_id': 2857}]
-        # 
-        # }
-        # Received query request. {'query': 'Add 2 and 3', 'agent': {'alive': False, 'tool_Id': '1001', 'minerId': 6, 'groupId': 3473, 'agent_id': 2856}
         fetch_group_data = util.get_object_by_group_and_agent(global_object,response['agent']['groupId'],response['agent']['agent_id'])
         if fetch_group_data is None:
             return web.json_response({"message": "Agent not found"})
@@ -197,7 +183,6 @@ async def get_query(request: web.Request):
         response['agent']['alive']  = False
         print("::::::::::::::::::::",global_object)
         bt.logging.info(f"Received query request. {response}")
-        # print(":::web.json_response(await webapp.validator.forward(response)):::",web.json_response(await webapp.validator.forward(response)))
         return web.json_response(await webapp.validator.forward(response))
 
 async def miner_response(request: web.Request):
@@ -208,18 +193,6 @@ async def miner_response(request: web.Request):
         
         bt.logging.info(f"Received query request. {response}")
         return web.json_response(await webapp.validator.interpreter_response(response))
-    
-def get_unique_miner_ids(data):
-    unique_miner_ids = set()
-    result = []
-    
-    for item in data:
-        if 'groupId' in item:
-            miner_id = item['groupId']
-            if miner_id not in unique_miner_ids:
-                unique_miner_ids.add(miner_id)
-                result.append(item)
-    return result
 
 def add_object(group_id, object_data):
     try:
@@ -227,7 +200,7 @@ def add_object(group_id, object_data):
         if group_id in global_object:
             global_object[group_id].append(object_data)
         else:
-            global_object[group_id] = [object_data]
+            global_object[group_id] = object_data
     except Exception as e:
         print("Error in add_object: ", e)
         
@@ -244,37 +217,52 @@ def find_group_id(search_id):
         return None
             
 async def request_for_miner(request: web.Request):
-    response = await request.json()
-    bt.logging.info(f"Received save_miner_info request. {response}")
-    payload = {
-        "account_id": "112233",
-        "chunks": [   
-            {
-                "id": "1",
-                "metadata": {
-                    "context": response['query']
-                }
-            },
-        ]
-    }
+    payload = await request.json() 
+    # payload = {'tools': ["open interpreter", "self operating computer", "gpt-4"], 'group_id': 'a0be0a03-1831-4ec2-b2b0-225b81b955e3', 'problem_statement': 'Add 2 and 3'}
+    global global_object
+    print("::::::::::::::global_object::::::::::::::::::::", global_object)
+    tools_to_use = []
+    data_to_send = []
     bt.logging.info(f"Received save_miner_info request. {payload}")
-    embedded_text = await convert_text_to_vector(payload)
-    # bt.logging.info(f"Embedded Text: {embedded_text}")
-    miner_tools_info = []
-    if len(embedded_text['vectorizedChunks']):
-        chunk = embedded_text['vectorizedChunks'][0]
-        miner_tools_info = (await get_vector_from_db(chunk['vector']))['matches']['matches']
-    bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
-    # check if the tool is alive
-    alive_tools = await webapp.validator.check_tool_alive(miner_tools_info,response["group_id"])
-    bt.logging.info(f"Alive Tools: {alive_tools}")
+    for tool in payload['tools']:
+        prompt = f"I have a query: {payload['problem_statement']} and I want to use {tool} to solve it."
+        payload_for_text_embedding = {
+            "account_id": "112233",
+            "chunks": [   
+                {
+                    "id": "1",
+                    "metadata": {
+                        "context": prompt
+                    }
+                },
+            ]
+        }
+        bt.logging.info(f"Received save_miner_info request. {payload_for_text_embedding}")
+        embedded_text = await convert_text_to_vector(payload_for_text_embedding)
+        # bt.logging.info(f"Embedded Text: {embedded_text}")
+        miner_tools_info = []
+        if len(embedded_text['vectorizedChunks']):
+            chunk = embedded_text['vectorizedChunks'][0]
+            miner_tools_info = (await get_vector_from_db(chunk['vector']))['matches']['matches']
+        bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
+        # check if the tool is alive
+        alive_tools = await webapp.validator.check_tool_alive(miner_tools_info, payload["group_id"])
+        bt.logging.info(f"Alive Tools: {alive_tools}")
+        
+        # get the unique miner ids
+        if len(alive_tools):
+            random_alive_tool = random.choice(alive_tools)
+            print(":::::::::::::: random_alive_tool::::::::::::::::::::", random_alive_tool)
+            tools_to_use.append(random_alive_tool)
+            data_to_send.append({
+                "groupId": random_alive_tool['groupId'],
+                "agent_id": random_alive_tool['agent_id'],
+            })
     
-    
-    # get the unique miner ids
-    if len(alive_tools):
-        unique_miners_details = get_unique_miner_ids(alive_tools)
-        print("::::::::::::::1. unique_miners_details::::::::::::::::::::", unique_miners_details)
-        return web.json_response(unique_miners_details)
+    print("::::::::::::::tools_to_use::::::::::::::::::::", tools_to_use)
+    add_object(payload['group_id'], tools_to_use)
+    print("::::::::::::::global_object::::::::::::::::::::", global_object)
+    return web.json_response(data_to_send)
 
 async def delete_miner_tool_info(tool_ids):
     """
