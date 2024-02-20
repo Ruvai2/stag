@@ -36,6 +36,7 @@ from template.utils import util
 from template.base.validator import BaseValidatorNeuron
 from template.protocol import PingMiner
 import random
+from config import config
 
 global_object = {}
 
@@ -227,7 +228,7 @@ async def request_for_miner(request: web.Request):
     for tool in payload['tools']:
         prompt = f"I have a query: {payload['problem_statement']} and I want to use {tool} to solve it."
         payload_for_text_embedding = {
-            "account_id": "112233",
+            "account_id": config.dassi_vectorize_account_id,
             "chunks": [   
                 {
                     "id": "1",
@@ -281,7 +282,7 @@ async def save_miner_info(alive_tool_list, miner_id):
     for tool_details in alive_tool_list:
         print(":::::::::::::: In save miner info :::::::::::::::::::", tool_details)
         payload = {
-            "account_id": "112233",
+            "account_id": config.dassi_vectorize_account_id,
             "chunks": [   
                 {
                     "id": "1",
