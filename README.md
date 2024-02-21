@@ -1,115 +1,86 @@
-<div align="center">
+<div align="left">
 
-# **Bittensor Subnet Template** <!-- omit in toc -->
-[![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
+# **Cortex.t Subnet** <!-- omit in toc -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
-
 ---
 
-## The Incentivized Internet <!-- omit in toc -->
-
-[Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
-</div>
-
 ---
-- [Quickstarter template](#quickstarter-template)
 - [Introduction](#introduction)
-  - [Example](#example)
-- [Installation](#installation)
-  - [Before you proceed](#before-you-proceed)
-  - [Install](#install)
-- [Writing your own incentive mechanism](#writing-your-own-incentive-mechanism)
-- [Subnet Links](#subnet-links)
+- [Setup](#setup)
+- [Mining](#mining)
+- [Validating](#validating)
 - [License](#license)
 
----
-## Quickstarter template
-
-This template contains all the required installation instructions, scripts, and files and functions for:
-- Building Bittensor subnets.
-- Creating custom incentive mechanisms and running these mechanisms on the subnets. 
-
-In order to simplify the building of subnets, this template abstracts away the complexity of the underlying blockchain and other boilerplate code. While the default behavior of the template is sufficient for a simple subnet, you should customize the template in order to meet your specific requirements.
----
 
 ## Introduction
 
-**IMPORTANT**: If you are new to Bittensor subnets, read this section before proceeding to [Installation](#installation) section. 
+**IMPORTANT**: If you are new to Bittensor, please checkout the [Bittensor Website](https://bittensor.com/) before proceeding to the [Setup](#setup) section. 
 
-The Bittensor blockchain hosts multiple self-contained incentive mechanisms called **subnets**. Subnets are playing fields in which:
-- Subnet miners who produce value, and
-- Subnet validators who produce consensus
+Introducing Bittensor Subnet 18 (Cortex.t): A Pioneering Platform for AI Development and Synthetic Data Generation.
 
-determine together the proper distribution of TAO for the purpose of incentivizing the creation of value, i.e., generating digital commodities, such as intelligence or data. 
+Cortex.t stands at the forefront of artificial intelligence, offering a dual-purpose solution that caters to the needs of app developers and innovators in the AI space. This platform is meticulously designed to deliver reliable, high-quality text and image responses through API usage, utilising the decentralised Bittensor network. It serves as a cornerstone for creating a fair, transparent, and manipulation-free environment for the incentivised production of intelligence (mining) and generation and fulfilment of diverse user prompts.
 
-Each subnet consists of:
-- Subnet miners and subnet validators.
-- A protocol using which the subnet miners and subnet validators interact with one another. This protocol is part of the incentive mechanism.
-- The Bittensor API using which the subnet miners and subnet validators interact with Bittensor's onchain consensus engine [Yuma Consensus](https://bittensor.com/documentation/validating/yuma-consensus). The Yuma Consensus is designed to drive these actors: subnet validators and subnet miners, into agreement on who is creating value and what that value is worth. 
+Our initiative is a leap forward in redefining the reward system for text and image prompting with a commitment to providing stability and reassurance to developers. By focusing on the value delivered to clients, we alleviate the concerns of data inconsistencies that often plague app development. The quality of Cortex.t is seamlessly integrated within the Bittensor network, allowing developers to harness the power of multiple subnets and modalities by building directly onto an existing validator, or through an API key from [Corcel](https://corcel.io).
 
-This starter template is split into three primary files. To write your own incentive mechanism, you should edit these files. These files are:
-1. `template/protocol.py`: Contains the definition of the protocol used by subnet miners and subnet validators.
-2. `neurons/miner.py`: Script that defines the subnet miner's behavior, i.e., how the subnet miner responds to requests from subnet validators.
-3. `neurons/validator.py`: This script defines the subnet validator's behavior, i.e., how the subnet validator requests information from the subnet miners and determines the scores.
+Cortex.t is also a transformative platform leveraging advanced AI models to generate synthetic prompt-response pairs. This novel method yields a comprehensive dataset of interactions, archived in wandb [wandb.ai/cortex-t/synthetic-QA](https://wandb.ai/cortex-t/synthetic-QA). The process involves recycling model outputs back into the system, using a prompt evolution and data augmentation strategy similar to Microsoft's approach in developing WizardLM. This enables the distillation of sophisticated AI models into smaller, yet efficient counterparts, mirroring the performance of their larger predecessors. Ultimately, Cortex.t democratizes access to high-end AI technology, encouraging innovation and customization.
 
-### Example
+By leveraging synthetic data, Cortex.t circumvents the traditional challenges of data collection and curation, accelerating the development of AI models that are both robust and adaptable. This platform is your gateway to AI mastery, offering the unique opportunity to train your models with data that reflects the depth and versatility of the parent model. With SynthPairPro, you're not just collecting data; you're capturing intelligence, providing a path to creating AI models that mirror the advanced understanding and response capabilities of their predecessors.
 
-The Bittensor Subnet 1 for Text Prompting is built using this template. See [Bittensor Text-Prompting](https://github.com/opentensor/text-prompting) for how to configure the files and how to add monitoring and telemetry and support multiple miner types. Also see this Subnet 1 in action on [Taostats](https://taostats.io/subnets/netuid-1/) explorer.
+Join us at Cortex.t, your bridge to AI excellence, and democratise access to top-level AI capabilities. Be part of the AI revolution and stay at the forefront of innovation with SynthPairPro – Synthesizing Intelligence, Empowering the Future!
 
----
 
-## Installation
+## Development
+
+### Testing
+
+install `nox` (`pip install nox`) and run `nox -s test`.
+
+## Setup
 
 ### Before you proceed
 Before you proceed with the installation of the subnet, note the following: 
 
-- Use these instructions to run your subnet locally for your development and testing, or on Bittensor testnet or on Bittensor mainnet. 
-- **IMPORTANT**: We **strongly recommend** that you first run your subnet locally and complete your development and testing before running the subnet on Bittensor testnet. Furthermore, make sure that you next run your subnet on Bittensor testnet before running it on the Bittensor mainnet.
-- You can run your subnet either as a subnet owner, or as a subnet validator or as a subnet miner. 
-- **IMPORTANT:** Make sure you are aware of the minimum compute requirements for your subnet. See the [Minimum compute YAML configuration](./min_compute.yml).
-- Note that installation instructions differ based on your situation: For example, installing for local development and testing will require a few additional steps compared to installing for testnet. Similarly, installation instructions differ for a subnet owner vs a validator or a miner. 
+**IMPORTANT**: We **strongly recommend** before proceeding that you test both subtensor and OpenAI API keys. Ensure you are running Subtensor locally to minimize chances of outages and improve the latency/connection. 
 
-### Install
+After exporting your OpenAI API key to your bash profile, test the streaming service for both the gpt-3.5-turbo and gpt-4 engines using ```./neurons/test_openai.py```. Neither the miner or the validator will function without a valid and working [OpenAI API key](https://platform.openai.com/). 
 
-- **Running locally**: Follow the step-by-step instructions described in this section: [Running Subnet Locally](./docs/running_on_staging.md).
-- **Running on Bittensor testnet**: Follow the step-by-step instructions described in this section: [Running on the Test Network](./docs/running_on_testnet.md).
-- **Running on Bittensor mainnet**: Follow the step-by-step instructions described in this section: [Running on the Main Network](./docs/running_on_mainnet.md).
+**IMPORTANT:** Make sure you are aware of the minimum compute requirements for cortex.t. See the [Minimum compute YAML configuration](./min_compute.yml).
+Note that this subnet requires very little compute. The main functionality is api calls, so we outsource the compute to openai. The cost for mining and validating on this subnet comes from api calls, not from compute. Please be aware of your API costs and monitor accordingly.
+
+A high tier key is required for both mining and validations so it is important if you do not have one to work your way up slowly by running a single miner or small numbers of miners whilst paying attention to your usage and limits.
+
+
+### Installation
+
+Download the repository, navigate to the folder and then install the necessary requirements with the following chained command.
+
+```git clone https://github.com/corcel-api/cortex.t.git && cd cortex.t && pip install -e .```
+
+Prior to proceeding, ensure you have a registered hotkey on subnet 18 mainnet. If not, run the command `btcli s register --netuid 18 --wallet.name [wallet_name] --wallet.hotkey [wallet.hotkey]`.
+
+We recommend using [direnv](https://direnv.net). After installing it, copy `envrc.example` to `.envrc` and substitute
+all env vars with values appropriate for your accounts. After making changes to `.envrc` run `direnv allow` and start a 
+new terminal tab.
+
+## Mining
+
+You can launch your miners via pm2 using the following command. 
+
+`pm2 start ./miner/miner.py --interpreter python3 -- --netuid 18 --subtensor.network <LOCAL/FINNEY/TEST> --wallet.name <WALLET NAME> --wallet.hotkey <HOTKEY NAME> --axon.port <PORT>`
+
+
+## Validating
+
+You can launch your validator via pm2 using the following command.
+
+`pm2 start ./validators/validator.py --interpreter python3 -- --netuid 18 --subtensor.network <LOCAL/FINNEY/TEST> --wallet.name <WALLET NAME> --wallet.hotkey <HOTKEY NAME>`
+
+
+## Logging
+
+As cortex.t supports streaming natively, you do not (and should not) enable `logging.trace` or `logging.debug` as all of the important information is already output to `logging.info` which is set as default.
 
 ---
-
-## Writing your own incentive mechanism
-
-As described in [Quickstarter template](#quickstarter-template) section above, when you are ready to write your own incentive mechanism, update this template repository by editing the following files. The code in these files contains detailed documentation on how to update the template. Read the documentation in each of the files to understand how to update the template. There are multiple **TODO**s in each of the files identifying sections you should update. These files are:
-- `template/protocol.py`: Contains the definition of the wire-protocol used by miners and validators.
-- `neurons/miner.py`: Script that defines the miner's behavior, i.e., how the miner responds to requests from validators.
-- `neurons/validator.py`: This script defines the validator's behavior, i.e., how the validator requests information from the miners and determines the scores.
-- `template/forward.py`: Contains the definition of the validator's forward pass.
-- `template/reward.py`: Contains the definition of how validators reward miner responses.
-
-In addition to the above files, you should also update the following files:
-- `README.md`: This file contains the documentation for your project. Update this file to reflect your project's documentation.
-- `CONTRIBUTING.md`: This file contains the instructions for contributing to your project. Update this file to reflect your project's contribution guidelines.
-- `template/__init__.py`: This file contains the version of your project.
-- `setup.py`: This file contains the metadata about your project. Update this file to reflect your project's metadata.
-- `docs/`: This directory contains the documentation for your project. Update this directory to reflect your project's documentation.
-
-__Note__
-The `template` directory should also be renamed to your project name.
----
-
-# Subnet Links
-In order to see real-world examples of subnets in-action, see the `subnet_links.json` document or access them from inside the `template` package by:
-```python
-import template
-template.SUBNET_LINKS
-[{'name': 'sn0', 'url': ''},
- {'name': 'sn1', 'url': 'https://github.com/opentensor/text-prompting/'},
- {'name': 'sn2', 'url': 'https://github.com/bittranslateio/bittranslate/'},
- {'name': 'sn3', 'url': 'https://github.com/gitphantomman/scraping_subnet/'},
- {'name': 'sn4', 'url': 'https://github.com/manifold-inc/targon/'},
-...
-]
-```
 
 ## License
 This repository is licensed under the MIT License.
