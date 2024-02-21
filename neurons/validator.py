@@ -133,7 +133,7 @@ class Validator(BaseValidatorNeuron):
         self.request_type = "CHECK_TOOL_ALIVE"
         for miner in miner_uids:
             self.query = {"query":{
-                    "query": "sum of two numbers",
+                    "query": "QUERY_TO_MINER",
                     "summary": False,
                     "minerId": miner['metadata']['uid'],
                     "status": True,
@@ -307,7 +307,46 @@ async def get_miner_tool_list(request: web.Request):
                     alive_tool_list.append(tool)
             await save_miner_info(alive_tool_list, miner_id)
     else:
-        return "Tool list is saved successfully"       
+        return "Tool list is saved successfully"  
+
+
+async def remove_agent_from_global_object(all_agents_detail, group_id, agent_id):
+    try:
+        removed_objects = []
+        if group_id in all_agents_detail:
+            group_data = all_agents_detail[group_id]
+            new_group_data = []
+            for obj in group_data:
+                if obj['agent_id'] == agent_id:
+                    removed_objects.append(obj)
+                else:
+                    new_group_data.append(obj)
+            all_agents_detail[group_id] = new_group_data
+        else:
+            return {"message": f"{agent_id} not found in this {group_id} group!"}
+        return all_agents_detail
+    except Exception as e:
+        print("Error in remove_agent_from_global_object: ", e)
+
+
+async def remove_agent(request: web.Request):
+    """
+    Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        global global_object
+        response = await request.json()
+        bt.logging.info(f"::::response:::::remove_agent:::{response}")
+
+        all_agents_detail = remove_agent_from_global_object(
+            global_object, response['group_id'], response['agent_id'])
+        global_object = all_agents_detail
+
+        bt.logging.info(f"global_object::::: {global_object}")
+        return {"message": "Agent removed!"}
+    except Exception as e:
+        bt.logging.info(f"error in remove_agent::::: {e}")
+        return {"message": "Agent not removing!"}
 
 class WebApp(web.Application):
     """
@@ -323,6 +362,7 @@ webapp.add_routes([
     web.post('/forward', get_query),
     web.post('/webhook', miner_response),
     web.post('/request_for_miner', request_for_miner),
-    web.post('/tool_list', get_miner_tool_list)
+    web.post('/tool_list', get_miner_tool_list),
+    web.post('/remove_miner', remove_agent)
 ])
 web.run_app(webapp, port=8080, loop=asyncio.get_event_loop())
