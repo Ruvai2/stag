@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from typing import Tuple
 import bittensor as bt
 
 
@@ -26,7 +26,7 @@ class BaseValidator(ABC):
         return uid, responses
 
     @abstractmethod
-    async def start_query(self, available_uids) -> tuple[list, dict]:
+    async def start_query(self, available_uids) -> Tuple[list, dict]:
         ...
 
     @abstractmethod

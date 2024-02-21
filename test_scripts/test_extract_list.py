@@ -178,7 +178,7 @@ async def get_list(list_type, num_questions_needed, theme=None):
     for prompt in selected_prompts:
         random_seed = random.randint(1, 10000)
         messages = [{'role': "user", 'content': prompt}]
-        task = call_openai(messages, 1, "gpt-4-1106-preview", random_seed)
+        task = call_openai(messages, 1, "gpt-4", random_seed)
         tasks.append(task)
 
     # Run all tasks concurrently and wait for them to complete

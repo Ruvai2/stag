@@ -208,7 +208,7 @@ class StreamPrompting(bt.StreamingSynapse):
     )
 
     model: str = pydantic.Field(
-        default="gpt-3.5-turbo",
+        default="gpt-4",
         title="model",
         description="The model to use when calling provider for your response.",
     )
@@ -232,7 +232,7 @@ class StreamPrompting(bt.StreamingSynapse):
             for k, v in response.__dict__["_raw_headers"]
         }
 
-        def extract_info(prefix: str) -> dict[str, str]:
+        def extract_info(prefix: str) -> Dict[str, str]:
             return {
                 key.split("_")[-1]: value
                 for key, value in headers.items()

@@ -7,11 +7,11 @@ import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 start_time = time.time()
 
 # Set up the API connection
-stability_api = client.StabilityInference(
-    key=os.environ['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0"
-)
+# stability_api = client.StabilityInference(
+#     # key=os.environ['STABILITY_KEY'],
+#     verbose=True,
+#     engine="stable-diffusion-xl-1024-v1-0"
+# )
 
 # Base64 Comparison
 def base64_comparison(data1, data2):

@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import AsyncIterator, Tuple
+from typing import AsyncIterator, Tuple, Dict, List
 
 import bittensor as bt
 import torch
@@ -16,7 +16,7 @@ class TextValidator(BaseValidator):
         super().__init__(dendrite, config, subtensor, wallet, timeout=60)
         self.streaming = True
         self.query_type = "text"
-        self.model =  "gpt-4-1106-preview"
+        self.model =  "gpt-4"
         self.max_tokens = 2048
         self.temperature = 0.0001
         self.weight = 1
@@ -36,7 +36,7 @@ class TextValidator(BaseValidator):
     """
     This code defines an asynchronous generator function called organic, which takes in metagraph and a query parameter of type dict[str, list[dict[str, str]]]. Inside the function, it iterates through the query items, creates a StreamPrompting object, logs a message, updates self.wandb_data["prompts"], and then awaits a response from self.dendrite. When a response is received, it iterates through the responses and yields a tuple of uid and the response.
     """
-    async def organic(self, metagraph, query: dict[str, list[dict[str, str]]]) -> AsyncIterator[tuple[int, str]]:
+    async def organic(self, metagraph, query: Dict[str, List[Dict[str, str]]]) -> AsyncIterator[Tuple[int, str]]:
         for uid, messages in query.items():
             syn = StreamPrompting(messages=messages, model=self.model, seed=self.seed, max_tokens=self.max_tokens, temperature=self.temperature, provider=self.provider, top_p=self.top_p, top_k=self.top_k)
             bt.logging.info(
@@ -60,7 +60,7 @@ class TextValidator(BaseValidator):
                 bt.logging.trace(resp)
                 yield uid, resp
 
-    async def handle_response(self, uid: str, responses) -> tuple[str, str]:
+    async def handle_response(self, uid: str, responses) -> Tuple[str, str]:
         full_response = ""
         for resp in responses:
             async for chunk in resp:
@@ -74,7 +74,7 @@ class TextValidator(BaseValidator):
     async def get_question(self, qty):
         return await get_question("text", qty)
 
-    async def start_query(self, available_uids, metagraph) -> tuple[list, dict]:
+    async def start_query(self, available_uids, metagraph) -> Tuple[list, dict]:
         query_tasks = []
         uid_to_question = {}
         # Randomly choose the provider based on specified probabilities
@@ -86,7 +86,7 @@ class TextValidator(BaseValidator):
             # claude models = ["claude-2.1", "claude-2.0", "claude-instant-1.2"]
             self.model = "anthropic.claude-v2:1"
         elif self.provider == "OpenAI":
-            self.model = "gpt-4-1106-preview"
+            self.model = "gpt-4"
 
         for uid in available_uids:
             prompt = await self.get_question(len(available_uids))
@@ -120,10 +120,10 @@ class TextValidator(BaseValidator):
 
     async def score_responses(
         self,
-        query_responses: list[tuple[int, str]],  # [(uid, response)]
-        uid_to_question: dict[int, str],  # uid -> prompt
+        query_responses: List[Tuple[int, str]],  # [(uid, response)]
+        uid_to_question: Dict[int, str],  # uid -> prompt
         metagraph: bt.metagraph,
-    ) -> tuple[torch.Tensor, dict[int, float], dict]:
+    ) -> Tuple[torch.Tensor, Dict[int, float], dict]:
         scores = torch.zeros(len(metagraph.hotkeys))
         uid_scores_dict = {}
         response_tasks = []
@@ -199,7 +199,7 @@ class TestTextValidator(TextValidator):
     async def query_miner(self, metagraph, uid, syn: StreamPrompting):
         return uid, await self.call_openai(syn.messages[0]['content'])
 
-    async def organic(self, metagraph, query: dict[str, list[dict[str, str]]]) -> AsyncIterator[tuple[int, str]]:
+    async def organic(self, metagraph, query: Dict[str, List[Dict[str, str]]]) -> AsyncIterator[Tuple[int, str]]:
         for uid, messages in query.items():
             for msg in messages:
                 yield uid, await self.call_openai(msg['content'])

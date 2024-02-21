@@ -10,7 +10,7 @@ if not OpenAI.api_key:
 
 client = AsyncOpenAI(timeout=30)
 
-async def send_openai_request(prompt, engine="gpt-4-1106-preview"):
+async def send_openai_request(prompt, engine="gpt-4"):
     try:
         stream = await client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],

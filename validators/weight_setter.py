@@ -5,7 +5,7 @@ import traceback
 import random
 from typing import Tuple
 import template
-
+from typing import Dict
 import bittensor as bt
 import torch
 import wandb
@@ -183,8 +183,8 @@ class WeightSetter:
 
     def register_text_validator_organic_query(
         self,
-        uid_to_response: dict[int, str],  # [(uid, response)]
-        messages_dict: dict[int, str],
+        uid_to_response: Dict[int, str],  # [(uid, response)]
+        messages_dict: Dict[int, str],
     ):
         self.organic_scoring_tasks.add(asyncio.create_task(
             wait_for_coro_with_limit(

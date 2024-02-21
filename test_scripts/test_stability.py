@@ -6,11 +6,11 @@ from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 
 # Set up the API connection
-stability_api = client.StabilityInference(
-    key=os.environ['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0"
-)
+# stability_api = client.StabilityInference(
+#     # key=os.environ['STABILITY_KEY'],
+#     verbose=True,
+#     engine="stable-diffusion-xl-1024-v1-0"
+# )
 
 # # Generate the image
 # answers = stability_api.generate(

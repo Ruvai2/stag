@@ -33,11 +33,11 @@ import anthropic_bedrock
 from anthropic_bedrock import AsyncAnthropicBedrock
 
 # Set up the API connection
-stability_api = stability_client.StabilityInference(
-    key=os.environ['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0"
-)
+# stability_api = stability_client.StabilityInference(
+#     # key=os.environ['STABILITY_KEY'],
+#     verbose=True,
+#     engine="stable-diffusion-xl-1024-v1-0"
+# )
 
 
 def load_state_from_file(filename: str = "state.json"):
@@ -126,7 +126,7 @@ async def get_list(list_type, num_questions_needed, theme=None):
                      f"list_type: {list_type}, selected_prompts: {selected_prompts}")
 
     tasks = [
-        call_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-3.5-turbo", random.randint(1, 10000))
+        call_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-4", random.randint(1, 10000))
         for prompt in selected_prompts
     ]
 
@@ -145,7 +145,7 @@ async def get_list(list_type, num_questions_needed, theme=None):
                     try:
                         random_seed = random.randint(1, 10000)
                         messages = [{'role': "user", 'content': selected_prompts[i]}]
-                        new_answer = await call_openai(messages, 0.85, "gpt-4-1106-preview", random_seed)
+                        new_answer = await call_openai(messages, 0.85, "gpt-4", random_seed)
                         new_answer = new_answer.replace("\n", " ") if new_answer else ""
                         new_extracted_list = extract_python_list(new_answer)
                         if new_extracted_list:
