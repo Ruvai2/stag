@@ -13,7 +13,7 @@ from pathlib import Path
 
 import bittensor as bt
 import torch
-import wandb
+# import wandb
 from aiohttp import web
 from aiohttp.web_response import Response
 from image_validator import ImageValidator
@@ -32,7 +32,7 @@ text_vali = None
 image_vali = None
 embed_vali = None
 metagraph = None
-wandb_runs = {}
+# wandb_runs = {}
 # organic requests are scored, the tasks are stored in this queue
 # for later being consumed by `query_synapse` cycle:
 organic_scoring_tasks = set()
@@ -41,10 +41,10 @@ EXPECTED_ACCESS_KEY = os.environ.get('EXPECTED_ACCESS_KEY', "hello")
 
 def get_config() -> bt.config:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--netuid", type=int, default=18)
-    parser.add_argument('--wandb_off', action='store_false', dest='wandb_on')
-    parser.add_argument('--http_port', type=int, default=8000)
-    parser.set_defaults(wandb_on=True)
+    parser.add_argument("--netuid", type=int, default=77)
+    # parser.add_argument('--wandb_off', action='store_false', dest='wandb_on')
+    parser.add_argument('--http_port', type=int, default=8080)
+    # parser.set_defaults(wandb_on=True)
     bt.subtensor.add_args(parser)
     bt.logging.add_args(parser)
     bt.wallet.add_args(parser)
@@ -58,33 +58,33 @@ def get_config() -> bt.config:
     return config
 
 
-def init_wandb(config, my_uid, wallet: bt.wallet):
-    if not config.wandb_on:
-        return
+# def init_wandb(config, my_uid, wallet: bt.wallet):
+#     if not config.wandb_on:
+#         return
 
-    run_name = f'validator-{my_uid}-{template.__version__}'
-    config.uid = my_uid
-    config.hotkey = wallet.hotkey.ss58_address
-    config.run_name = run_name
-    config.version = template.__version__
-    config.type = 'validator'
+    # run_name = f'validator-{my_uid}-{template.__version__}'
+    # config.uid = my_uid
+    # config.hotkey = wallet.hotkey.ss58_address
+    # config.run_name = run_name
+    # config.version = template.__version__
+    # config.type = 'validator'
 
-    # Initialize the wandb run for the single project
-    run = wandb.init(
-        name=run_name,
-        project=template.PROJECT_NAME,
-        entity='cortex-t',
-        config=config,
-        dir=config.full_path,
-        reinit=True
-    )
+    # # Initialize the wandb run for the single project
+    # run = wandb.init(
+    #     name=run_name,
+    #     project=template.PROJECT_NAME,
+    #     entity='cortex-t',
+    #     config=config,
+    #     dir=config.full_path,
+    #     reinit=True
+    # )
 
-    # Sign the run to ensure it's from the correct hotkey
-    signature = wallet.hotkey.sign(run.id.encode()).hex()
-    config.signature = signature
-    wandb.config.update(config, allow_val_change=True)
+    # # Sign the run to ensure it's from the correct hotkey
+    # signature = wallet.hotkey.sign(run.id.encode()).hex()
+    # config.signature = signature
+    # wandb.config.update(config, allow_val_change=True)
 
-    bt.logging.success(f"Started wandb run for project '{template.PROJECT_NAME}'")
+    # bt.logging.success(f"Started wandb run for project '{template.PROJECT_NAME}'")
 
 def initialize_components(config: bt.config):
     global metagraph
@@ -166,7 +166,7 @@ def main(run_aio_app=True, test=False) -> None:
         "wallet": wallet
     }
     initialize_validators(validator_config, test)
-    init_wandb(config, my_uid, wallet)
+    # init_wandb(config, my_uid, wallet)
     loop = asyncio.get_event_loop()
 
     weight_setter = (WeightSetter if not test else TestWeightSetter)(
@@ -181,8 +181,8 @@ def main(run_aio_app=True, test=False) -> None:
         finally:
             state = utils.get_state()
             utils.save_state_to_file(state)
-            if config.wandb_on:
-                wandb.finish()
+            # if config.wandb_on:
+            #     wandb.finish()
 
 if __name__ == "__main__":
     main()

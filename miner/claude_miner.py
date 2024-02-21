@@ -22,7 +22,7 @@ from typing import Tuple
 from stability_sdk import client
 
 import bittensor as bt
-import wandb
+# import wandb
 from config import check_config, get_config
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
@@ -40,11 +40,11 @@ OpenAI.api_key = os.environ.get("OPENAI_API_KEY")
 if not OpenAI.api_key:
     raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
-stability_api = client.StabilityInference(
-    key=os.environ['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0"
-)
+# stability_api = client.StabilityInference(
+#     key=os.environ['STABILITY_KEY'],
+#     verbose=True,
+#     engine="stable-diffusion-xl-1024-v1-0"
+# )
 
 
 OpenAI.api_key = os.environ.get("OPENAI_API_KEY")
@@ -60,13 +60,13 @@ anthropic_client = anthropic.Anthropic()
 anthropic_client.api_key = api_key
 
 netrc_path = pathlib.Path.home() / ".netrc"
-wandb_api_key = os.getenv("WANDB_API_KEY")
+# wandb_api_key = os.getenv("WANDB_API_KEY")
 
-bt.logging.info("WANDB_API_KEY is set")
+# bt.logging.info("WANDB_API_KEY is set")
 bt.logging.info("~/.netrc exists:", netrc_path.exists())
 
-if not wandb_api_key and not netrc_path.exists():
-    raise ValueError("Please log in to wandb using `wandb login` or set the WANDB_API_KEY environment variable.")
+# if not wandb_api_key and not netrc_path.exists():
+#     raise ValueError("Please log in to wandb using `wandb login` or set the WANDB_API_KEY environment variable.")
 
 client = AsyncOpenAI(timeout=60.0)
 valid_hotkeys = []
@@ -434,33 +434,33 @@ class StreamingTemplateMiner(StreamMiner):
                 image_data["image_revised_prompt"] = image_revised_prompt
                 bt.logging.info(f"returning image response of {image_url}")
 
-            elif provider == "Stability":
-                bt.logging.debug(f"calling stability for {messages, seed, steps, cfg_scale, width, height, samples, sampler}")
+            # elif provider == "Stability":
+            #     bt.logging.debug(f"calling stability for {messages, seed, steps, cfg_scale, width, height, samples, sampler}")
 
-                meta = stability_api.generate(
-                    prompt=messages,
-                    seed=seed,
-                    steps=steps,
-                    cfg_scale=cfg_scale,
-                    width=width,
-                    height=height,
-                    samples=samples,
-                    # sampler=sampler
-                )
-                # Process and upload the image
-                b64s = []
-                for image in meta:
-                    for artifact in image.artifacts:
-                        b64s.append(base64.b64encode(artifact.binary).decode())
+            #     meta = stability_api.generate(
+            #         prompt=messages,
+            #         seed=seed,
+            #         steps=steps,
+            #         cfg_scale=cfg_scale,
+            #         width=width,
+            #         height=height,
+            #         samples=samples,
+            #         # sampler=sampler
+            #     )
+            #     # Process and upload the image
+            #     b64s = []
+            #     for image in meta:
+            #         for artifact in image.artifacts:
+            #             b64s.append(base64.b64encode(artifact.binary).decode())
 
-                image_data["b64s"] = b64s
-                bt.logging.info(f"returning image response to {messages}")
+            #     image_data["b64s"] = b64s
+            #     bt.logging.info(f"returning image response to {messages}")
 
-            else:
-                bt.logging.error(f"Unknown provider: {provider}")
+            # else:
+            #     bt.logging.error(f"Unknown provider: {provider}")
 
-            synapse.completion = image_data
-            return synapse
+            # synapse.completion = image_data
+            # return synapse
 
         except Exception as exc:
             bt.logging.error(f"error in images: {exc}\n{traceback.format_exc()}")
@@ -579,7 +579,7 @@ class StreamingTemplateMiner(StreamMiner):
 
 def get_valid_hotkeys(config):
     global valid_hotkeys
-    api = wandb.Api()
+    # api = wandb.Api()
     subtensor = bt.subtensor(config=config)
     while True:
         metagraph = subtensor.metagraph(18)

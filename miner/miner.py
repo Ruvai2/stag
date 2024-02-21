@@ -22,7 +22,7 @@ from typing import Tuple
 from stability_sdk import client
 
 import bittensor as bt
-import wandb
+# import wandb
 from config import check_config, get_config
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
@@ -41,11 +41,11 @@ OpenAI.api_key = os.environ.get("OPENAI_API_KEY")
 if not OpenAI.api_key:
     raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
-stability_api = client.StabilityInference(
-    key=os.environ.get['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0"
-)
+# stability_api = client.StabilityInference(
+#     key=os.environ.get['STABILITY_KEY'],
+#     verbose=True,
+#     engine="stable-diffusion-xl-1024-v1-0"
+# )
 
 api_key = os.environ.get("ANTHROPIC_API_KEY")
 
@@ -59,13 +59,13 @@ anthropic_client = anthropic.Anthropic()
 anthropic_client.api_key = api_key
 
 netrc_path = pathlib.Path.home() / ".netrc"
-wandb_api_key = os.getenv("WANDB_API_KEY")
+# wandb_api_key = os.getenv("WANDB_API_KEY")
 
 bt.logging.info("WANDB_API_KEY is set")
 bt.logging.info("~/.netrc exists:", netrc_path.exists())
 
-if not wandb_api_key and not netrc_path.exists():
-    raise ValueError("Please log in to wandb using `wandb login` or set the WANDB_API_KEY environment variable.")
+# if not wandb_api_key and not netrc_path.exists():
+#     raise ValueError("Please log in to wandb using `wandb login` or set the WANDB_API_KEY environment variable.")
 
 client = AsyncOpenAI(timeout=60.0)
 valid_hotkeys = []
@@ -122,16 +122,16 @@ class StreamMiner(ABC):
         print(f"Attaching forward function to axon. {self._prompt}")
         self.axon.attach(
             forward_fn=self._prompt,
-            blacklist_fn=self.blacklist_prompt,
+            # blacklist_fn=self.blacklist_prompt,
         ).attach(
             forward_fn=self._is_alive,
-            blacklist_fn=self.blacklist_is_alive,
+            # blacklist_fn=self.blacklist_is_alive,
         ).attach(
             forward_fn=self._images,
-            blacklist_fn=self.blacklist_images,
+            # blacklist_fn=self.blacklist_images,
         ).attach(
             forward_fn=self._embeddings,
-            blacklist_fn=self.blacklist_embeddings,
+            # blacklist_fn=self.blacklist_embeddings,
         )
         bt.logging.info(f"Axon created: {self.axon}")
 
@@ -141,7 +141,7 @@ class StreamMiner(ABC):
         self.thread: threading.Thread = None
         self.lock = asyncio.Lock()
         self.request_timestamps: dict = {}
-        thread = threading.Thread(target=get_valid_hotkeys, args=(self.config,))
+        # thread = threading.Thread(target=get_valid_hotkeys, args=(self.config,))
         # thread.start()
 
     @abstractmethod
@@ -433,27 +433,27 @@ class StreamingTemplateMiner(StreamMiner):
                 image_data["image_revised_prompt"] = image_revised_prompt
                 bt.logging.info(f"returning image response of {image_url}")
 
-            elif provider == "Stability":
-                bt.logging.debug(f"calling stability for {messages, seed, steps, cfg_scale, width, height, samples, sampler}")
+            # elif provider == "Stability":
+            #     bt.logging.debug(f"calling stability for {messages, seed, steps, cfg_scale, width, height, samples, sampler}")
 
-                meta = stability_api.generate(
-                    prompt=messages,
-                    seed=seed,
-                    steps=steps,
-                    cfg_scale=cfg_scale,
-                    width=width,
-                    height=height,
-                    samples=samples,
-                    # sampler=sampler
-                )
-                # Process and upload the image
-                b64s = []
-                for image in meta:
-                    for artifact in image.artifacts:
-                        b64s.append(base64.b64encode(artifact.binary).decode())
+            #     meta = stability_api.generate(
+            #         prompt=messages,
+            #         seed=seed,
+            #         steps=steps,
+            #         cfg_scale=cfg_scale,
+            #         width=width,
+            #         height=height,
+            #         samples=samples,
+            #         # sampler=sampler
+            #     )
+            #     # Process and upload the image
+            #     b64s = []
+            #     for image in meta:
+            #         for artifact in image.artifacts:
+            #             b64s.append(base64.b64encode(artifact.binary).decode())
 
-                image_data["b64s"] = b64s
-                bt.logging.info(f"returning image response to {messages}")
+            #     image_data["b64s"] = b64s
+            #     bt.logging.info(f"returning image response to {messages}")
 
             else:
                 bt.logging.error(f"Unknown provider: {provider}")
@@ -576,54 +576,54 @@ class StreamingTemplateMiner(StreamMiner):
         token_streamer = partial(_prompt, synapse)
         return synapse.create_streaming_response(token_streamer)
 
-def get_valid_hotkeys(config):
-    global valid_hotkeys
-    api = wandb.Api()
-    subtensor = bt.subtensor(config=config)
-    while True:
-        metagraph = subtensor.metagraph(18)
-        try:
-            runs = api.runs(f"cortex-t/{template.PROJECT_NAME}")
-            latest_version = get_version()
-            for run in runs:
-                if run.state == "running":
-                    try:
-                        # Extract hotkey and signature from the run's configuration
-                        hotkey = run.config['hotkey']
-                        signature = run.config['signature']
-                        version = run.config['version']
-                        bt.logging.debug(f"found running run of hotkey {hotkey}, {version} ")
+# def get_valid_hotkeys(config):
+#     global valid_hotkeys
+#     api = wandb.Api()
+#     subtensor = bt.subtensor(config=config)
+#     while True:
+#         metagraph = subtensor.metagraph(18)
+#         try:
+#             runs = api.runs(f"cortex-t/{template.PROJECT_NAME}")
+#             latest_version = get_version()
+#             for run in runs:
+#                 if run.state == "running":
+#                     try:
+#                         # Extract hotkey and signature from the run's configuration
+#                         hotkey = run.config['hotkey']
+#                         signature = run.config['signature']
+#                         version = run.config['version']
+#                         bt.logging.debug(f"found running run of hotkey {hotkey}, {version} ")
 
-                        if latest_version is None:
-                            bt.logging.error("Github API call failed!")
-                            continue
+#                         if latest_version is None:
+#                             bt.logging.error("Github API call failed!")
+#                             continue
 
-                        if latest_version not in (version, None):
-                            bt.logging.debug(
-                                f"Version Mismatch: Run version {version} does not match GitHub version {latest_version}"
-                            )
-                            continue
+#                         if latest_version not in (version, None):
+#                             bt.logging.debug(
+#                                 f"Version Mismatch: Run version {version} does not match GitHub version {latest_version}"
+#                             )
+#                             continue
 
-                        # Check if the hotkey is registered in the metagraph
-                        if hotkey not in metagraph.hotkeys:
-                            bt.logging.debug(f"Invalid running run: The hotkey: {hotkey} is not in the metagraph.")
-                            continue
+#                         # Check if the hotkey is registered in the metagraph
+#                         if hotkey not in metagraph.hotkeys:
+#                             bt.logging.debug(f"Invalid running run: The hotkey: {hotkey} is not in the metagraph.")
+#                             continue
 
-                        # Verify the signature using the hotkey
-                        if not bt.Keypair(ss58_address=hotkey).verify(run.id, bytes.fromhex(signature)):
-                            bt.logging.debug(f"Failed Signature: The signature: {signature} is not valid")
-                            continue
+#                         # Verify the signature using the hotkey
+#                         if not bt.Keypair(ss58_address=hotkey).verify(run.id, bytes.fromhex(signature)):
+#                             bt.logging.debug(f"Failed Signature: The signature: {signature} is not valid")
+#                             continue
 
-                        if hotkey not in valid_hotkeys:
-                            valid_hotkeys.append(hotkey)
-                    except Exception:
-                        bt.logging.debug(f"exception in get_valid_hotkeys: {traceback.format_exc()}")
+#                         if hotkey not in valid_hotkeys:
+#                             valid_hotkeys.append(hotkey)
+#                     except Exception:
+#                         bt.logging.debug(f"exception in get_valid_hotkeys: {traceback.format_exc()}")
 
-            bt.logging.info(f"total valid hotkeys list = {valid_hotkeys}")
-            time.sleep(180)
+#             bt.logging.info(f"total valid hotkeys list = {valid_hotkeys}")
+#             time.sleep(180)
 
-        except json.JSONDecodeError as e:
-            bt.logging.debug(f"JSON decoding error: {e} {run.id}")
+#         except json.JSONDecodeError as e:
+#             bt.logging.debug(f"JSON decoding error: {e} {run.id}")
 
 
 if __name__ == "__main__":
