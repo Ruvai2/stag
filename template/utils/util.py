@@ -1,11 +1,11 @@
 import uuid
 
-def generate_group_reference_number():
+def generate_agent_reference_id():
     try:
         uuid_reference = uuid.uuid4()
         return str(uuid_reference)
     except Exception as e:
-        print(f"An unexpected error occurred:::::generate_group_reference_number::::: {e}")
+        print(f"An unexpected error occurred:::::generate_agent_reference_id::::: {e}")
 
 def get_object_by_group_and_agent(global_details, group_id, agent_id):
     try:

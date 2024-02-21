@@ -88,25 +88,6 @@ class Validator(BaseValidatorNeuron):
         query_response = await forward(self)
         return query_response
     
-    async def send_res_to_group_chat_copy(self):
-        try:
-            print("::::::::send_res_to_group_chat::::::",self.query)
-
-            # while self.query_res["key"] == "INTERPRETER_PROCESSING":
-            #     # Wait until the key becomes "INTEPRETR_PROGESS"
-            #     print("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
-            #     await asyncio.sleep(1)
-            print(":::::::::::self.query::::::",self.query)
-            async with aiohttp.ClientSession() as session:
-                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
-                    if response.status == 200:
-                        print("Successfully called the group chat:::::")
-                    else:
-                        print(f"Error: {response.status}, {await response.text()}")
-                        print("Failed to call the group chat:::::")
-            return "Successfully called the group chat:::::"
-        except Exception as e:
-            print(":::::Error send_res_to_group_chat:::::::", e)
 
     async def interpreter_response(self, response):
         bt.logging.info("interpreter_response", response)
@@ -165,7 +146,7 @@ class Validator(BaseValidatorNeuron):
             print(":::::::::tool_status:::::::::::",tool_status)
             if tool_status and 'alive' in tool_status and tool_status['alive'] == True:
                 tool_status['groupId'] = group_id
-                tool_status['agent_id'] = util.generate_group_reference_number()
+                tool_status['agent_id'] = util.generate_agent_reference_id()
                 alive_tools_list.append(tool_status)
             print("::::::::::::::::res_tools_list::::::::::::",alive_tools_list)
         return alive_tools_list
