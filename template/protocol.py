@@ -18,7 +18,58 @@ class IsAlive( bt.Synapse ):
         description="Completion status of the current StreamPrompting object. "
                     "This attribute is mutable and can be updated.",
     )
-
+    
+class IsToolAlive( bt.Synapse ):
+    tool_id: str = pydantic.Field(  
+        ...,
+        title="Tool ID",    
+        description="The ID of the tool to check."
+    )   
+    status: Optional[dict] = pydantic.Field(
+        None,
+        title="Status",
+        description="The status of the tool."
+    )
+    
+class GetToolList( bt.Synapse ):
+    is_tool_list: bool = pydantic.Field(
+        True,
+        title="Is Tool List",
+        description="The status of the tool list."
+    )
+    miner_id: int = pydantic.Field(
+        ...,
+        title="Miner ID",
+        description="The ID of the miner."
+    )
+    output: Optional[dict] = pydantic.Field(
+        default={},
+        title="output",
+        description="This returns the end result of the synapse process.",
+    )
+    
+class InterpreterRequests( bt.Synapse ):
+    query: str = pydantic.Field(
+        ...,
+        title="Query",
+        description="The query to be interpreted."
+    )
+    summary: Optional[bool] = pydantic.Field(
+        False,
+        title="Summary",
+        description="The summary of the query."
+    )
+    miner_id: int = pydantic.Field(
+        ...,
+        title="Miner ID",
+        description="The ID of the miner."
+    )
+    tool_id: str = pydantic.Field(
+        ...,
+        title="Tool ID",
+        description="The ID of the tool."
+    )
+            
 class ImageResponse(bt.Synapse):
     """ A class to represent the response for an image-related request. """
     # https://platform.stability.ai/docs/api-reference#tag/v1generation/operation/textToImage
@@ -138,8 +189,21 @@ class Embeddings( bt.Synapse):
         title="Embeddings",
         description="The resulting list of embeddings, each corresponding to an input text."
     )
+    
+class Dummy( bt.Synapse):
+    """ A class to represent the dummy request and response. """
 
+    text: str = pydantic.Field(
+        ...,
+        title="Text",
+        description="The input text for the dummy request."
+    )
 
+    response: Optional[str] = pydantic.Field(
+        None,
+        title="Response",
+        description="The response to the dummy request."
+    )
 
 class StreamPrompting(bt.StreamingSynapse):
 

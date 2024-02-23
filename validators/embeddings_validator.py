@@ -14,6 +14,7 @@ from base_validator import BaseValidator
 class EmbeddingsValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet):
         super().__init__(dendrite, config, subtensor, wallet, timeout=15)
+        bt.logging.info("Embeddings Validator initialized.")
         self.streaming = False
         self.query_type = "embeddings"
         self.model = "text-embedding-ada-002"

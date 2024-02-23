@@ -20,6 +20,7 @@ from image_validator import ImageValidator
 from embeddings_validator import EmbeddingsValidator
 from text_validator import TextValidator, TestTextValidator
 from base_validator import BaseValidator
+from groupchat_validator import GroupChatValidator
 from envparse import env
 
 import template
@@ -28,15 +29,75 @@ import sys
 
 from weight_setter import WeightSetter, TestWeightSetter
 
+from template import forward
+from utils import utils
+
 text_vali = None
 image_vali = None
 embed_vali = None
+group_chat_vali = None
 metagraph = None
 # wandb_runs = {}
 # organic requests are scored, the tasks are stored in this queue
 # for later being consumed by `query_synapse` cycle:
 organic_scoring_tasks = set()
 EXPECTED_ACCESS_KEY = os.environ.get('EXPECTED_ACCESS_KEY', "hello")
+bt.logging.info("Starting validator...Expecting access key: " + EXPECTED_ACCESS_KEY)
+
+miner_group_association = {}
+
+class Validator(BaseValidator):
+    """
+    Your validator neuron class. You should use this class to define your validator's behavior. In particular, you should replace the forward function with your own logic.
+
+    This class inherits from the BaseValidatorNeuron class, which in turn inherits from BaseNeuron. The BaseNeuron class takes care of routine tasks such as setting up wallet, subtensor, metagraph, logging directory, parsing config, etc. You can override any of the methods in BaseNeuron if you need to customize the behavior.
+
+    This class provides reasonable default behavior for a validator such as keeping a moving average of the scores of the miners and using them to set weights at the end of each epoch. Additionally, the scores are reset for new hotkeys at the end of each epoch.
+    """
+
+    def __init__(self, dendrite, config, subtensor, wallet: bt.wallet):
+        super().__init__(dendrite, config, subtensor, wallet, timeout=60)
+        bt.logging.info("Validator neuron initialized")
+        self.load_state() 
+    
+    async def forward(self, response):
+        """
+        Validator forward pass. Consists of:
+        - Generating the query
+        - Querying the miners
+        - Getting the responses
+        - Rewarding the miners
+        - Updating the scores
+        """
+
+        # craete a synapse query
+        # bt.logging.info("Creating synapse query", self.step)
+        # synapse = template.protocol.Dummy(dummy_input=self.step)
+        # {'query': None, 'agent': {'uid': 6, 'tool': 1002}}
+        bt.logging.info("Creating synapse query", response)
+        # self.query = response
+        # self.query["request_type"] = "QUERY_MINER"
+        # self.request_type = "QUERY_MINER"
+        # {'query': 'add 2 and 3', 'agent': {'alive': False, 'tool_Id': '1004', 'minerId': 6, 'groupId': 5151}}
+        self.query = {"query":{
+                "query":  response['query'],
+                "summary": False,
+                "minerId": response['agent']['minerId'],
+                "status": False,
+                "tool_Id": response['agent']['tool_Id'],
+                "is_tool_list": False,
+            }
+        }
+        # self.agent = response['agent'] 
+        bt.logging.info("synapse query: ", self.query)
+        # bt.logging.info("synapse agent: ", self.agent)
+        query_response = await forward(self)
+        return query_response
+
+
+
+
+
 
 
 def get_config() -> bt.config:
@@ -98,7 +159,7 @@ def initialize_components(config: bt.config):
     if wallet.hotkey.ss58_address not in metagraph.hotkeys:
         bt.logging.error(
             f"Your validator: {wallet} is not registered to chain connection: "
-            f"{subtensor}. Run btcli register --netuid 18 and try again."
+            f"{subtensor}. Run btcli register --netuid 77 and try again."
         )
         sys.exit()
 
@@ -106,16 +167,18 @@ def initialize_components(config: bt.config):
 
 
 def initialize_validators(vali_config, test=False):
-    global text_vali, image_vali, embed_vali
+    global text_vali, image_vali, embed_vali, group_chat_vali
 
     text_vali = (TextValidator if not test else TestTextValidator)(**vali_config)
     image_vali = ImageValidator(**vali_config)
     embed_vali = EmbeddingsValidator(**vali_config)
+    group_chat_vali = GroupChatValidator(**vali_config)
     bt.logging.info("initialized_validators")
 
 
 async def process_text_validator(request: web.Request):
     # Basic request validation
+    bt.logging.info(f"Received request: {await request.json()}")
     if request.method != "POST" or request.path != '/text-validator/':
         return web.Response(status=400, text="Invalid request")
 
@@ -128,11 +191,14 @@ async def process_text_validator(request: web.Request):
         messages_dict = {int(k): [{'role': 'user', 'content': v}] for k, v in (await request.json()).items()}
     except ValueError:
         return web.Response(status=400, text="Bad request format")
+    
+    bt.logging.info(f"Received messages: {messages_dict}")
 
     response = web.StreamResponse()
     await response.prepare(request)
 
     uid_to_response = dict.fromkeys(messages_dict, "")
+    bt.logging.info(f"I'm here:+++++++++++++++++++ {uid_to_response} {messages_dict} {text_vali} {validator_app.weight_setter.metagraph}")
     try:
         async for uid, content in text_vali.organic(validator_app.weight_setter.metagraph, messages_dict):
             uid_to_response[uid] += content
@@ -146,15 +212,81 @@ async def process_text_validator(request: web.Request):
 
     return response
 
+    
+async def forward_query_request(request: web.Request):
+    """
+    Forward request handler. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+
+        return web.json_response(await group_chat_vali.get_group_chat_query(data))
+    except Exception as e:
+        bt.logging.error(f'Encountered in {forward_query_request.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+    
+async def handle_request_for_the_miner_agents(request: web.Request):
+    """
+    Handle request for the miner agents. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+       return web.json_response(await group_chat_vali.request_for_miner(data))
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+    
+async def handle_get_miner_tool_list(request: web.Request):
+    """
+    Handle request for the miner agents. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+       await group_chat_vali.get_miner_tool_list()
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_get_miner_tool_list.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+
+async def handle_miner_response(request: web.Request):
+        """
+        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+        """
+        try:
+            data = await request.json()
+        except ValueError:
+            return web.Response(status=400, text="Bad request format")
+        
+        bt.logging.info(f"Received query request. {data}")
+        
+        try:
+            return web.json_response(await validator_app.validator.forward(data))
+        except Exception as e:
+            bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
+            return web.Response(status=500, text="Internal error")
 
 class ValidatorApplication(web.Application):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+        self.validator: Validator | None = None
         self.weight_setter: WeightSetter | None = None
-
+        
 
 validator_app = ValidatorApplication()
-validator_app.add_routes([web.post('/text-validator/', process_text_validator)])
+validator_app.add_routes([
+    web.post('/text-validator/', process_text_validator),
+    web.post('/forward', forward_query_request),
+    web.post('/webhook', handle_miner_response),
+    web.post('/request_for_the_miner_agents', handle_request_for_the_miner_agents),
+    web.post('/tool_list', handle_get_miner_tool_list),
+    # web.post('/remove_miner', remove_agent)
+])
 
 def main(run_aio_app=True, test=False) -> None:
     config = get_config()
@@ -170,7 +302,7 @@ def main(run_aio_app=True, test=False) -> None:
     loop = asyncio.get_event_loop()
 
     weight_setter = (WeightSetter if not test else TestWeightSetter)(
-        loop, dendrite, subtensor, config, wallet, text_vali, image_vali, embed_vali)
+        loop, dendrite, subtensor, config, wallet, text_vali, image_vali, embed_vali, group_chat_vali)
     validator_app.weight_setter = weight_setter
 
     if run_aio_app:

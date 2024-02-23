@@ -7,13 +7,14 @@ import torch
 from base_validator import BaseValidator
 
 import template.reward
-from template.protocol import StreamPrompting
+from template.protocol import StreamPrompting, Dummy
 from template.utils import call_openai, get_question, call_anthropic
 
 
 class TextValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet: bt.wallet):
         super().__init__(dendrite, config, subtensor, wallet, timeout=60)
+        bt.logging.info("Text Validator initialized.")
         self.streaming = True
         self.query_type = "text"
         self.model =  "gpt-4-1106-preview"
@@ -124,16 +125,19 @@ class TextValidator(BaseValidator):
         uid_to_question: dict[int, str],  # uid -> prompt
         metagraph: bt.metagraph,
     ) -> tuple[torch.Tensor, dict[int, float], dict]:
+        bt.logging.info(f"Scoring text responses", len(metagraph.hotkeys))
         scores = torch.zeros(len(metagraph.hotkeys))
         uid_scores_dict = {}
         response_tasks = []
+        
+        bt.logging.debug(f":::::::::::::::: {metagraph.weights} ")
 
         # Decide to score all UIDs this round based on a chance
-        will_score_all = self.should_i_score()
+        # will_score_all = self.should_i_score()
 
         for uid, response in query_responses:
-            self.wandb_data["responses"][uid] = response
-            if will_score_all and response:
+            # self.wandb_data["responses"][uid] = response
+            if response:
                 prompt = uid_to_question[uid]
                 response_tasks.append((uid, self.call_api(prompt, self.provider)))
 
@@ -201,5 +205,6 @@ class TestTextValidator(TextValidator):
 
     async def organic(self, metagraph, query: dict[str, list[dict[str, str]]]) -> AsyncIterator[tuple[int, str]]:
         for uid, messages in query.items():
+            bt.logging.info(f":::::::::::::::::::uid: {uid}, messages: {messages} :::::::::::::::::::::::::")
             for msg in messages:
                 yield uid, await self.call_openai(msg['content'])

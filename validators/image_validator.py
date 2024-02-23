@@ -19,6 +19,7 @@ from template.protocol import ImageResponse
 class ImageValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet):
         super().__init__(dendrite, config, subtensor, wallet, timeout=30)
+        bt.logging.info("Image Validator initialized.")
         self.streaming = False
         self.query_type = "images"
         self.model = "dall-e-3"
@@ -115,6 +116,7 @@ class ImageValidator(BaseValidator):
                             bt.logging.info(f"UID {uid} response = {image_url}")
                             download_tasks.append(asyncio.create_task(self.download_image(image_url, session)))
                         else:  # Stability
+                            bt.logging.debug(":::::::::::::::::::::: completion ::::::::::::::::::", completion)
                             b64s = completion["b64s"]
                             bt.logging.info(f"UID {uid} responded with an image")
                             for b64 in b64s:

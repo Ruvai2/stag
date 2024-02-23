@@ -7,7 +7,7 @@ import bittensor
 import pytest
 import torch
 
-from validators.validator import main, validator_app
+from validators.validator_webapp import main, validator_app
 
 hotkeys = os.environ.get('CORTEXT_MINER_ADDITIONAL_WHITELIST_VALIDATOR_KEYS', '').split(',')
 

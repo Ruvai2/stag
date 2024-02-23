@@ -30,11 +30,16 @@ import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from anthropic_bedrock import AsyncAnthropicBedrock, HUMAN_PROMPT, AI_PROMPT, AnthropicBedrock
 
 import template
-from template.protocol import Embeddings, ImageResponse, IsAlive, StreamPrompting
+from template.protocol import Embeddings, ImageResponse, IsAlive, StreamPrompting, Dummy, IsToolAlive, GetToolList, InterpreterRequests
 from template.utils import get_version
 import sys
+from utils import tool_ports_mapping
 
 from starlette.types import Send
+
+from app_config import config
+from utils import request_handler
+from tools.tools_list import tool_lists
 
 
 OpenAI.api_key = os.environ.get("OPENAI_API_KEY")
@@ -127,6 +132,14 @@ class StreamMiner(ABC):
             forward_fn=self._is_alive,
             # blacklist_fn=self.blacklist_is_alive,
         ).attach(
+            forward_fn=self._is_tool_alive,
+        ).attach(
+            forward_fn=self._get_tool_list,
+        ).attach(
+            forward_fn=self._handle_interpreter_requests
+        ).attach(
+            forward_fn=self._dummy,
+        ).attach(
             forward_fn=self._images,
             # blacklist_fn=self.blacklist_images,
         ).attach(
@@ -150,6 +163,18 @@ class StreamMiner(ABC):
 
     def _prompt(self, synapse: StreamPrompting) -> StreamPrompting:
         return self.prompt(synapse)
+    
+    def _dummy(self, synapse: Dummy) -> Dummy:
+        return self.dummy(synapse)
+    
+    def _is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
+        return self.is_tool_alive(synapse)
+    
+    def _get_tool_list(self, synapse: GetToolList) -> GetToolList:
+        return self.get_tool_list(synapse)
+        
+    def __handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
+        return self.handle_interpreter_requests(synapse)
 
     def base_blacklist(self, synapse, blacklist_amt = 20000) -> Tuple[bool, str]:
         try:
@@ -230,6 +255,18 @@ class StreamMiner(ABC):
 
     def _prompt(self, synapse: StreamPrompting) -> StreamPrompting:
         return self.prompt(synapse)
+    
+    def _dummy(self, synapse: Dummy) -> Dummy:
+        return self.dummy(synapse)
+    
+    def _is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
+        return self.is_tool_alive(synapse)
+    
+    def _get_tool_list(self, synapse: GetToolList) -> GetToolList:
+        return self.get_tool_list(synapse)
+    
+    def __handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
+        return self.handle_interpreter_requests(synapse)
 
     async def _images(self, synapse: ImageResponse) -> ImageResponse:
         return await self.images(synapse)
@@ -244,6 +281,22 @@ class StreamMiner(ABC):
 
     @abstractmethod
     def prompt(self, synapse: StreamPrompting) -> StreamPrompting:
+        ...
+        
+    @abstractmethod
+    def dummy(self, synapse: Dummy) -> Dummy:
+        ...
+        
+    @abstractmethod
+    def is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
+        ...
+        
+    @abstractmethod
+    def get_tool_list(self, synapse: GetToolList) -> GetToolList:
+        ...
+        
+    @abstractmethod
+    def handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         ...
 
     @abstractmethod
@@ -261,7 +314,7 @@ class StreamMiner(ABC):
         ):
             bt.logging.error(
                 f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}"
-                f"Please register the hotkey using `btcli s register --netuid 18` before trying again"
+                f"Please register the hotkey using `btcli s register --netuid 77` before trying again"
             )
             sys.exit()
         bt.logging.info(
@@ -396,6 +449,41 @@ class StreamingTemplateMiner(StreamMiner):
         except Exception:
             bt.logging.error(f"Exception in embeddings function: {traceback.format_exc()}")
 
+    def dummy(self, synapse: Dummy) -> Dummy:
+        bt.logging.info(f"received dummy request: {synapse}")
+        try:
+            synapse.response = "dummy response"
+            return synapse
+        except Exception as exc:
+            bt.logging.error(f"error in dummy: {exc}\n{traceback.format_exc()}")
+            
+    def is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
+        try:
+            bt.logging.info("tool answered to be active", synapse)
+            portId = str(tool_ports_mapping.get_tool_port(synapse.tool_id))
+            if not portId:
+                return {'result': 'Miner does not exist'}
+        
+            URL = config.BASE_URL + portId + '/api/alive'
+            tool_status = request_handler.request_handler_get(URL)
+            bt.logging.info(f"tool_status: {tool_status}")
+            synapse.status = {"alive": False} if tool_status is None else tool_status
+            return synapse
+        except Exception as e: 
+            bt.logging.error(f"::::Error in get_tool_list::::", e)
+            
+    def get_tool_list(self, synapse: GetToolList) -> GetToolList:
+        try:
+            bt.logging.info("tool list requested", synapse)
+            dict_output = {}
+            dict_output['key'] = tool_lists
+            synapse.output = dict_output
+            return synapse
+        except Exception as e: 
+            bt.logging.error(f"::::Error in get_tool_list::::", e)
+            
+    def handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
+        pass
 
     async def images(self, synapse: ImageResponse) -> ImageResponse:
         bt.logging.info(f"received image request: {synapse}")

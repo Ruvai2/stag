@@ -31,7 +31,8 @@ async def wait_for_coro_with_limit(coro, timeout: int) -> Tuple[bool, object]:
 
 
 class WeightSetter:
-    def __init__(self, loop: asyncio.AbstractEventLoop, dendrite, subtensor, config, wallet, text_vali, image_vali, embed_vali):
+    def __init__(self, loop: asyncio.AbstractEventLoop, dendrite, subtensor, config, wallet, text_vali, image_vali, embed_vali, group_chat_vali):
+        bt.logging.info(":::::::::::::: WeightSetter :::::::::::::::::::")
         self.loop = loop
         self.dendrite = dendrite
         self.subtensor = subtensor
@@ -40,7 +41,7 @@ class WeightSetter:
         self.text_vali = text_vali
         self.image_vali = image_vali
         self.embed_vali = embed_vali
-
+        self.group_chat_vali = group_chat_vali
         self.moving_average_scores = None
         self.metagraph = subtensor.metagraph(config.netuid)
         self.total_scores = torch.zeros(len(self.metagraph.hotkeys))
@@ -51,9 +52,11 @@ class WeightSetter:
         self.loop.create_task(self.perform_synthetic_scoring_and_update_weights())
 
     async def run_sync_in_async(self, fn):
+        bt.logging.info(f"Running {fn.__name__} in a separate thread.")
         return await self.loop.run_in_executor(self.thread_executor, fn)
 
     async def consume_organic_scoring(self):
+        bt.logging.info("Starting consume_organic_scoring loop.")
         while True:
             try:
                 if self.organic_scoring_tasks:
@@ -79,6 +82,7 @@ class WeightSetter:
                 
             
     async def perform_synthetic_scoring_and_update_weights(self):
+        bt.logging.info("Starting perform_synthetic_scoring_and_update_weights loop.")
         while True:
             for steps_passed in itertools.count():
                 self.metagraph = await self.run_sync_in_async(lambda: self.subtensor.metagraph(self.config.netuid))
@@ -100,9 +104,11 @@ class WeightSetter:
                 await asyncio.sleep(10)
 
     def select_validator(self, steps_passed):
-        return self.text_vali if steps_passed % 5 in (0, 1, 2, 3) else self.image_vali
+        bt.logging.info("selecting validator")  
+        return self.text_vali
 
     async def get_available_uids(self):
+        bt.logging.info("getting available uids")
         """Get a dictionary of available UIDs and their axons asynchronously."""
         tasks = {uid.item(): self.check_uid(self.metagraph.axons[uid.item()], uid.item()) for uid in self.metagraph.uids}
         results = await asyncio.gather(*tasks.values())
@@ -113,6 +119,7 @@ class WeightSetter:
         return available_uids
 
     async def check_uid(self, axon, uid):
+        bt.logging.info(f"checking UID {uid}")
         """Asynchronously check if a UID is available."""
         try:
             response = await self.dendrite(axon, IsAlive(), deserialize=False, timeout=4)
@@ -128,20 +135,24 @@ class WeightSetter:
             return None
 
     def shuffled(self, list_: list) -> list:
+        bt.logging.info("shuffling list")
         list_ = list_.copy()
         random.shuffle(list_)
         return list_
 
     async def process_modality(self, selected_validator, available_uids):
+        bt.logging.info("processing modality")
         uid_list = self.shuffled(list(available_uids.keys()))
         bt.logging.info(f"starting {selected_validator.__class__.__name__} get_and_score for {uid_list}")
         scores, uid_scores_dict, wandb_data = await selected_validator.get_and_score(uid_list, self.metagraph)
+        bt.logging.info(f"finished {selected_validator.__class__.__name__} get_and_score, scores = {scores}, uid_scores_dict = {uid_scores_dict}")
         if self.config.wandb_on:
             wandb.log(wandb_data)
             bt.logging.success("wandb_log successful")
         return scores, uid_scores_dict
 
     async def update_weights(self, steps_passed):
+        bt.logging.info("updating weights")
         """ Update weights based on total scores, using min-max normalization for display. """
         bt.logging.info("updated weights")
         avg_scores = self.total_scores / (steps_passed + 1)
@@ -161,6 +172,7 @@ class WeightSetter:
         await self.set_weights(avg_scores)
 
     async def set_weights(self, scores):
+        bt.logging.info("Setting weights.")
         # alpha of .3 means that each new score replaces 30% of the weight of the previous weights
         alpha = .3
         if self.moving_average_scores is None:
@@ -169,6 +181,7 @@ class WeightSetter:
         # Update the moving average scores
         self.moving_average_scores = alpha * scores + (1 - alpha) * self.moving_average_scores
         bt.logging.info(f"Updated moving average of weights: {self.moving_average_scores}")
+        bt.logging.info(f":::::::::::::::Data ::::::::::::::::{self.config.netuid} {self.wallet} {self.metagraph.uids}")
         await self.run_sync_in_async(
             lambda: self.subtensor.set_weights(
                 netuid=self.config.netuid,
@@ -180,12 +193,14 @@ class WeightSetter:
             )
         )
         bt.logging.success("Successfully set weights.")
+        bt.logging.debug(f"Set weights to {self.metagraph.weights}")
 
     def register_text_validator_organic_query(
         self,
         uid_to_response: dict[int, str],  # [(uid, response)]
         messages_dict: dict[int, str],
     ):
+        bt.logging.info("registering text validator organic query")
         self.organic_scoring_tasks.add(asyncio.create_task(
             wait_for_coro_with_limit(
                 self.text_vali.score_responses(
