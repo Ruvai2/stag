@@ -44,62 +44,6 @@ organic_scoring_tasks = set()
 EXPECTED_ACCESS_KEY = os.environ.get('EXPECTED_ACCESS_KEY', "hello")
 bt.logging.info("Starting validator...Expecting access key: " + EXPECTED_ACCESS_KEY)
 
-miner_group_association = {}
-
-class Validator(BaseValidator):
-    """
-    Your validator neuron class. You should use this class to define your validator's behavior. In particular, you should replace the forward function with your own logic.
-
-    This class inherits from the BaseValidatorNeuron class, which in turn inherits from BaseNeuron. The BaseNeuron class takes care of routine tasks such as setting up wallet, subtensor, metagraph, logging directory, parsing config, etc. You can override any of the methods in BaseNeuron if you need to customize the behavior.
-
-    This class provides reasonable default behavior for a validator such as keeping a moving average of the scores of the miners and using them to set weights at the end of each epoch. Additionally, the scores are reset for new hotkeys at the end of each epoch.
-    """
-
-    def __init__(self, dendrite, config, subtensor, wallet: bt.wallet):
-        super().__init__(dendrite, config, subtensor, wallet, timeout=60)
-        bt.logging.info("Validator neuron initialized")
-        self.load_state() 
-    
-    async def forward(self, response):
-        """
-        Validator forward pass. Consists of:
-        - Generating the query
-        - Querying the miners
-        - Getting the responses
-        - Rewarding the miners
-        - Updating the scores
-        """
-
-        # craete a synapse query
-        # bt.logging.info("Creating synapse query", self.step)
-        # synapse = template.protocol.Dummy(dummy_input=self.step)
-        # {'query': None, 'agent': {'uid': 6, 'tool': 1002}}
-        bt.logging.info("Creating synapse query", response)
-        # self.query = response
-        # self.query["request_type"] = "QUERY_MINER"
-        # self.request_type = "QUERY_MINER"
-        # {'query': 'add 2 and 3', 'agent': {'alive': False, 'tool_Id': '1004', 'minerId': 6, 'groupId': 5151}}
-        self.query = {"query":{
-                "query":  response['query'],
-                "summary": False,
-                "minerId": response['agent']['minerId'],
-                "status": False,
-                "tool_Id": response['agent']['tool_Id'],
-                "is_tool_list": False,
-            }
-        }
-        # self.agent = response['agent'] 
-        bt.logging.info("synapse query: ", self.query)
-        # bt.logging.info("synapse agent: ", self.agent)
-        query_response = await forward(self)
-        return query_response
-
-
-
-
-
-
-
 def get_config() -> bt.config:
     parser = argparse.ArgumentParser()
     parser.add_argument("--netuid", type=int, default=77)
@@ -223,7 +167,6 @@ async def forward_query_request(request: web.Request):
         return web.Response(status=400, text="Bad request format")
     
     try:
-
         return web.json_response(await group_chat_vali.get_group_chat_query(data))
     except Exception as e:
         bt.logging.error(f'Encountered in {forward_query_request.__name__}:\n{traceback.format_exc()}')
@@ -266,15 +209,29 @@ async def handle_miner_response(request: web.Request):
         bt.logging.info(f"Received query request. {data}")
         
         try:
-            return web.json_response(await validator_app.validator.forward(data))
+            return web.json_response(await group_chat_vali.interpreter_response(data))
         except Exception as e:
             bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
             return web.Response(status=500, text="Internal error")
 
+async def handle_remove_agent_request(request: web.Request):
+    """
+    Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+        return web.json_response(await group_chat_vali.remove_agent(data))
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+
 class ValidatorApplication(web.Application):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        self.validator: Validator | None = None
         self.weight_setter: WeightSetter | None = None
         
 
@@ -283,9 +240,9 @@ validator_app.add_routes([
     web.post('/text-validator/', process_text_validator),
     web.post('/forward', forward_query_request),
     web.post('/webhook', handle_miner_response),
-    web.post('/request_for_the_miner_agents', handle_request_for_the_miner_agents),
+    web.post('/request_for_miner', handle_request_for_the_miner_agents),
     web.post('/tool_list', handle_get_miner_tool_list),
-    # web.post('/remove_miner', remove_agent)
+    web.post('/remove_miner', handle_remove_agent_request)
 ])
 
 def main(run_aio_app=True, test=False) -> None:

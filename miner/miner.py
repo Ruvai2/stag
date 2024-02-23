@@ -40,6 +40,7 @@ from starlette.types import Send
 from app_config import config
 from utils import request_handler
 from tools.tools_list import tool_lists
+from tools.interpreter_agent import interpreter_tool
 
 
 OpenAI.api_key = os.environ.get("OPENAI_API_KEY")
@@ -173,7 +174,7 @@ class StreamMiner(ABC):
     def _get_tool_list(self, synapse: GetToolList) -> GetToolList:
         return self.get_tool_list(synapse)
         
-    def __handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
+    def _handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         return self.handle_interpreter_requests(synapse)
 
     def base_blacklist(self, synapse, blacklist_amt = 20000) -> Tuple[bool, str]:
@@ -265,7 +266,7 @@ class StreamMiner(ABC):
     def _get_tool_list(self, synapse: GetToolList) -> GetToolList:
         return self.get_tool_list(synapse)
     
-    def __handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
+    def _handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         return self.handle_interpreter_requests(synapse)
 
     async def _images(self, synapse: ImageResponse) -> ImageResponse:
@@ -483,7 +484,36 @@ class StreamingTemplateMiner(StreamMiner):
             bt.logging.error(f"::::Error in get_tool_list::::", e)
             
     def handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
-        pass
+        try:
+            bt.logging.info(f"received interpreter request: {synapse}")
+            interpreter_tool_response = self.interpreter_agent_request({
+                "query": synapse.query,
+                "summary": synapse.summary,
+                "tool_id": synapse.tool_id,
+                "miner_id": synapse.miner_id
+            })
+            synapse.output = interpreter_tool_response
+            return synapse
+        except Exception as e:
+            bt.logging.error(f"::::Error in handle_interpreter_requests::::", e)
+            
+    def interpreter_agent_request(self, synapse):
+        try:
+            bt.logging.info("tool answered to be active", synapse)
+            portId = str(tool_ports_mapping.get_tool_port(synapse['tool_id']))
+            if not portId:
+                return {'result': 'Miner does not exist'}
+            
+            return self.interpreter_main(synapse['query'], portId, synapse['summary'])
+        except Exception as e:
+            print(f"::::Error in interprter_agent_request::::;", e)
+    
+    def interpreter_main(self, query, portId, summary = False):
+        try:
+            interpreter_tool(query, summary, portId)
+            return {'key': 'INTERPRETER_PROCESSING'}
+        except Exception as e:
+            print(f"::::Error in main::::", e)
 
     async def images(self, synapse: ImageResponse) -> ImageResponse:
         bt.logging.info(f"received image request: {synapse}")

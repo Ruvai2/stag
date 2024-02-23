@@ -69,6 +69,11 @@ class InterpreterRequests( bt.Synapse ):
         title="Tool ID",
         description="The ID of the tool."
     )
+    output:Optional[dict] = pydantic.Field(
+        default={},
+        title="output",
+        description="This returns the end result of the synapse process.",
+    )
             
 class ImageResponse(bt.Synapse):
     """ A class to represent the response for an image-related request. """

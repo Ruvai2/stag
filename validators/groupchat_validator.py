@@ -25,18 +25,10 @@ class GroupChatValidator(BaseValidator):
     
     async def check_tool_alive(self, miner_tools_info, group_id):
         try:
-            # bt.logging.info(f"Checking if the tool is alive {miner_tools_info} {group_id}")
             alive_tools_list = []
             for tool in miner_tools_info:
                 syn = IsToolAlive(tool_id = tool['metadata']['toolId'])
-                # responses = await self.query_miner(self.metagraph, tool['metadata']['uid'], syn)
                 bt.logging.info(f"Checking if the tool is alive {tool} {tool['metadata']['uid']}, syn: {syn}, {self.metagraph.axons[tool['metadata']['uid']]}")
-                # responses = await self.dendrite(
-                #     self.metagraph.axons[tool['metadata']['uid']],
-                #     syn,
-                #     deserialize=False,
-                #     timeout=self.timeout,
-                # )
                 responses = (await self.query_miner(self.metagraph, tool['metadata']['uid'], syn))[0]
                 bt.logging.info(f"Alive Tools: {responses}")
                 if responses.status is not None and responses.status['alive']:
@@ -49,13 +41,10 @@ class GroupChatValidator(BaseValidator):
                     })
             bt.logging.info(f"Alive Tools: {alive_tools_list}")
             return alive_tools_list
-                
         except Exception as e:
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
         
     async def request_for_miner(self, payload: dict):
-        # payload = await request.json() 
-        # payload = {'tools': ["open interpreter", "self operating computer", "gpt-4"], 'group_id': 'a0be0a03-1831-4ec2-b2b0-225b81b955e3', 'problem_statement': 'Add 2 and 3'}
         global miner_group_association
         print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
         tools_to_use = []
@@ -181,14 +170,12 @@ class GroupChatValidator(BaseValidator):
                         alive_tool_list.append(tool)
                 await self.save_miner_info(alive_tool_list, miner_id)
     
-    # async def miner_response(request: web.Request):
-    #     """
-    #     Get query request handler. This method handles the incoming requests and returns the response from the forward function.
-    #     """
-    #     response = await request.json()
-        
-    #     bt.logging.info(f"Received query request. {response}")
-    #     return web.json_response(await webapp.validator.interpreter_response(response))
+    async def interpreter_response(self, response):
+        bt.logging.info("interpreter_response", response)
+        self.query_res = response
+        bt.logging.info("interpreter_response: ", self.query_res)
+        query_response = await self.send_res_to_group_chat()
+        return query_response
     
     async def get_group_chat_query(self, data):
         """
@@ -200,15 +187,13 @@ class GroupChatValidator(BaseValidator):
         if fetch_group_data is None:
             return {"message": "Agent not found"}
         bt.logging.info(f"Received query request. {data}")
-        syn = InterpreterRequests(query=data['query'], miner_id=fetch_group_data['tool_id'], tool_id=fetch_group_data['minerId'])
+        syn = InterpreterRequests(query=data['query'], miner_id=int(fetch_group_data['minerId']), tool_id=fetch_group_data['tool_id'])
         response = await self.forward(syn, fetch_group_data['minerId'])
-        print("::::::::::::::::::::",miner_group_association)
+        print("::::::::::::::::::::",miner_group_association, response)
         return response
     
     async def send_res_to_group_chat(self):
         try:
-            print("::::::::send_res_to_group_chat::::::",self.query)
-
             while self.query_res["key"] == "INTERPRETER_PROCESSING":
                 # Wait until the key becomes "INTEPRETR_PROGESS"
                 print("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
@@ -236,23 +221,49 @@ class GroupChatValidator(BaseValidator):
         """
         print("::::::::::::::SELF.QUERY::::::::::::::::::", syn)
         try:
-            # responses = self.dendrite.query(
-            #     axons=[self.metagraph.axons[self.query['query']['minerId']]],
-            #     # axons=[self.metagraph.axons[uid] for uid in self.metagraph.uids],
-            #     synapse=InterpreterRequests(query=self.query),
-            #     deserialize=True,
-            # )
-            responses = self.query_miner(self.metagraph, miner_id, syn)
+            responses = await self.query_miner(self.metagraph, miner_id, syn)
             res_string  = responses[0]
-            if res_string and 'key' in res_string and res_string['key'] == 'INTERPRETER_PROCESSING':
-                self.query_res = res_string
-                await self.send_res_to_group_chat(self)
+            bt.logging.info("::::::::::::::: res_string:::::::::::::::::", res_string)
+            if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
+                self.query_res = res_string.output
+                await self.send_res_to_group_chat()
                 return
             else:
                 return responses
         except Exception as e:
             print(":::::Error while sending dendrite:::::::",e)
+            
+    
+    async def remove_agent_from_global_object(self, all_agents_detail, group_id, agent_id):
+        try:
+            removed_objects = []
+            if group_id in all_agents_detail:
+                group_data = all_agents_detail[group_id]
+                new_group_data = []
+                for obj in group_data:
+                    if obj['agent_id'] == agent_id:
+                        removed_objects.append(obj)
+                    else:
+                        new_group_data.append(obj)
+                all_agents_detail[group_id] = new_group_data
+            else:
+                return {"message": f"{agent_id} not found in this {group_id} group!"}
+            return all_agents_detail
+        except Exception as e:
+            print("Error in remove_agent_from_global_object: ", e)
 
+    async def remove_agent(self, data):
+        try:
+            global miner_group_association
+            all_agents_detail = self.remove_agent_from_global_object(
+                miner_group_association, data['group_id'], data['agent_id'])
+            miner_group_association = all_agents_detail
+
+            bt.logging.info(f"miner_group_association::::: {miner_group_association}")
+            return {"message": "Agent removed!"}
+        except Exception as e:
+            bt.logging.info(f"error in remove_agent::::: {e}")
+            return {"message": "Agent not removing!"}
     
     async def score_responses(
         self,
