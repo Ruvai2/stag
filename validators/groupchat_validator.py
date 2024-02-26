@@ -3,7 +3,7 @@ import random
 from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
-from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo
+from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest
 from template.utils import call_openai
 import asyncio
 import torch
@@ -15,15 +15,21 @@ from utils import utils
 
 miner_group_association = {}
 global_miner_details = []
+global_agent_tool_association = [{
+    "agent_id": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b1",
+    "tool_id": 1001,
+    "miner_id": 16
+}]
 
 class GroupChatValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet: bt.wallet):
         super().__init__(dendrite, config, subtensor, wallet, timeout=60)
         bt.logging.info("GroupChat Validator initialized.")
         
-    async def query_miner(self, metagraph, uid, syn):
-        bt.logging.info(f"Querying miner {uid} with {syn}")
-        return await self.dendrite([metagraph.axons[uid]], syn, deserialize=False, timeout=self.timeout)
+    async def query_miner(self, metagraph, miner_uid, syn):
+        bt.logging.info(f"Querying miner {miner_uid} with {syn}")
+        return await self.dendrite([metagraph.axons[miner_uid]], syn, deserialize=False, timeout=self.timeout)
+    
     
     async def check_tool_alive(self, miner_tools_info, group_id):
         try:
@@ -49,7 +55,6 @@ class GroupChatValidator(BaseValidator):
     async def get_res_from_open_ai(miner_tools_info, query):
         prompt = """  """
         openai_res = await call_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-3.5-turbo")
-
         
     async def request_for_miner(self, payload: dict):
         global miner_group_association
@@ -103,7 +108,7 @@ class GroupChatValidator(BaseValidator):
         global miner_group_association
         print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
 
-        #  will have to hit shivang api.......
+        #  TODO: will have to hit shivang api.......
 
         tools_to_use = []
         data_to_send = []
@@ -334,6 +339,24 @@ class GroupChatValidator(BaseValidator):
         except Exception as e:
             bt.logging.info(f"error in remove_agent::::: {e}")
             return {"message": "Agent not removing!"}
+    
+    def find_tool_id_by_agent_id(self, agent_id):
+        try:
+            for obj in global_agent_tool_association:
+                if obj['agent_id'] == agent_id:
+                    return obj['tool_id'], obj['miner_id']
+            return None
+        except Exception as e:
+            print("Error in find_tool_id_by_agent_id: ", e)
+            return None
+        
+    async def run_tool(self, data):
+        tool_id, miner_id = self.find_tool_id_by_agent_id(data['agent_id'])
+        tool_details = await vectorize_apis.get_vector_from_db(tool_id)
+        syn = RunToolRequest(tool_id=tool_id, command=tool_details['run_commands']['command'], docker_file=tool_details['docker_file'], description=tool_details['description'], miner_id=miner_id)
+        response = await self.query_miner(self.metagraph, miner_id, syn)
+        # TODO: Abhishek sir will  provide the response
+        return response
     
     async def score_responses(
         self,

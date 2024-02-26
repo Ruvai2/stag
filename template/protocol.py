@@ -47,7 +47,39 @@ class GetToolList( bt.Synapse ):
         title="output",
         description="This returns the end result of the synapse process.",
     )
-
+    
+class RunToolRequest( bt.Synapse ):
+    run_commands: List[str] = pydantic.Field(
+        {},
+        title="Run Commands for docker file",
+        description="The commands to run the tool."
+    )
+    docker_file: str = pydantic.Field(
+        ...,
+        title="Docker File",
+        description="The docker file to run the tool."
+    )
+    tool_id: str = pydantic.Field(
+        ...,
+        title="Tool ID",
+        description="The ID of the tool."
+    )
+    miner_id: int = pydantic.Field( 
+        ...,
+        title="Miner ID",
+        description="The ID of the miner."
+    )
+    description: str = pydantic.Field(
+        ...,
+        title="Description",
+        description="The description of the tool."
+    )
+    output: Optional[dict] = pydantic.Field(
+        default={},
+        title="output",
+        description="This returns the end result of the synapse process.",
+    )
+    
 class MinerInfo( bt.Synapse ):
     uid: str = pydantic.Field(
         ...,
