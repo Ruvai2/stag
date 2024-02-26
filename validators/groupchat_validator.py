@@ -2,8 +2,9 @@ import bittensor as bt
 import random
 from base_validator import BaseValidator
 from app_config import config
-from utils import vectorize_apis
-from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests
+from utils import vectorize_apis,utils
+from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo
+from template.utils import call_openai
 import asyncio
 import torch
 import random
@@ -13,6 +14,7 @@ import asyncio
 from utils import utils
 
 miner_group_association = {}
+global_miner_details = []
 
 class GroupChatValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet: bt.wallet):
@@ -43,6 +45,11 @@ class GroupChatValidator(BaseValidator):
             return alive_tools_list
         except Exception as e:
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
+
+    async def get_res_from_open_ai(miner_tools_info, query):
+        prompt = """  """
+        openai_res = await call_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-3.5-turbo")
+
         
     async def request_for_miner(self, payload: dict):
         global miner_group_association
@@ -71,6 +78,59 @@ class GroupChatValidator(BaseValidator):
                 chunk = embedded_text['vectorizedChunks'][0]
                 miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
             bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
+            print("::::::::::::SEND_RESPONSE_TO_OPENAI:::::::::::::::")
+            await self.get_res_from_open_ai(miner_tools_info)
+            # check if the tool is alive
+            alive_tools = await self.check_tool_alive(miner_tools_info, payload["group_id"])
+            bt.logging.info(f"Alive Tools: {alive_tools}")
+            
+            # get the unique miner ids
+            if alive_tools and len(alive_tools):
+                random_alive_tool = random.choice(alive_tools)
+                print(":::::::::::::: random_alive_tool::::::::::::::::::::", random_alive_tool)
+                tools_to_use.append(random_alive_tool)
+                data_to_send.append({
+                    "groupId": random_alive_tool['groupId'],
+                    "agent_id": random_alive_tool['agent_id'],
+                })
+        
+        print("::::::::::::::tools_to_use::::::::::::::::::::", tools_to_use)
+        self.add_object(payload['group_id'], tools_to_use)
+        print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
+        return data_to_send
+
+    async def request_for_tools_listing(self, payload: dict):
+        global miner_group_association
+        print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
+
+        #  will have to hit shivang api.......
+
+        tools_to_use = []
+        data_to_send = []
+        bt.logging.info(f"Received save_miner_info request. {payload}")
+        for tool in payload['tools']:
+            prompt = f"I have a query: {payload['problem_statement']} and I want to use {tool} to solve it."
+            payload_for_text_embedding = {
+                "account_id": config.dassi_vectorize_account_id,
+                "chunks": [   
+                    {
+                        "id": "1",
+                        "metadata": {
+                            "context": prompt
+                        }
+                    },
+                ]
+            }
+            bt.logging.info(f"Received save_miner_info request. {payload_for_text_embedding}")
+            embedded_text = await vectorize_apis.convert_text_to_vector(payload_for_text_embedding)
+            # bt.logging.info(f"Embedded Text: {embedded_text}")
+            miner_tools_info = []
+            if len(embedded_text['vectorizedChunks']):
+                chunk = embedded_text['vectorizedChunks'][0]
+                miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
+            bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
+            print("::::::::::::SEND_RESPONSE_TO_OPENAI:::::::::::::::")
+            await self.get_res_from_open_ai(miner_tools_info)
             # check if the tool is alive
             alive_tools = await self.check_tool_alive(miner_tools_info, payload["group_id"])
             bt.logging.info(f"Alive Tools: {alive_tools}")
@@ -116,6 +176,16 @@ class GroupChatValidator(BaseValidator):
         self.all_uids = [int(uid) for uid in self.metagraph.uids]
         return self.all_uids
     
+    async def fetch_miner_details(self):
+        for miner_id in self.get_valid_miners_info():
+            syn = MinerInfo(uid=miner_id)
+            bt.logging.info(f"Received get_miner_tool_list request. {syn}, miner_id: {miner_id}")
+            miner_details = (await self.query_miner(self.metagraph, miner_id, syn))[0]
+            miner_details['agent_id'] = utils.generate_agent_reference_id()
+            global_miner_details.append(miner_details)
+            bt.logging.info(f"Miner List: {miner_details}")
+        return 
+
     async def save_miner_info(self, alive_tool_list, miner_id):
         """
         Save miner info request handler. This method handles the incoming requests and saves the miner info.

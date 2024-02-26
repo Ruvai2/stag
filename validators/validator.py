@@ -186,6 +186,21 @@ async def handle_request_for_the_miner_agents(request: web.Request):
     except Exception as e:
         bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
+
+async def handle_request_for_the_tools_list(request: web.Request):
+    """
+    Handle request for the miner agents. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+       return web.json_response(await group_chat_vali.request_for_tools_listing(data))
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
     
 async def handle_get_miner_tool_list(request: web.Request):
     """
@@ -242,7 +257,8 @@ validator_app.add_routes([
     web.post('/webhook', handle_miner_response),
     web.post('/request_for_miner', handle_request_for_the_miner_agents),
     web.post('/tool_list', handle_get_miner_tool_list),
-    web.post('/remove_miner', handle_remove_agent_request)
+    web.post('/remove_miner', handle_remove_agent_request),
+    web.post('/request_tools_list', handle_request_for_the_tools_list)
 ])
 
 def main(run_aio_app=True, test=False) -> None:

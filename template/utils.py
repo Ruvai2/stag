@@ -33,11 +33,11 @@ import anthropic_bedrock
 from anthropic_bedrock import AsyncAnthropicBedrock
 
 # Set up the API connection
-stability_api = stability_client.StabilityInference(
-    key=os.environ['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0"
-)
+# stability_api = stability_client.StabilityInference(
+#     key=os.environ['STABILITY_KEY'],
+#     verbose=True,
+#     engine="stable-diffusion-xl-1024-v1-0"
+# )
 
 
 def load_state_from_file(filename: str = "state.json"):
@@ -396,30 +396,30 @@ async def call_anthropic(prompt, temperature, model, max_tokens=2048, top_p=1, t
         bt.logging.error(f"Error when calling Anthropic: {traceback.format_exc()}")
         await asyncio.sleep(0.5)
 
-async def call_stability(prompt, seed, steps, cfg_scale, width, height, samples, sampler):
-    # bt.logging.info(f"calling stability for {prompt, seed, steps, cfg_scale, width, height, samples, sampler}")
-    bt.logging.info(f"calling stability for {prompt[:50]}...")
+# async def call_stability(prompt, seed, steps, cfg_scale, width, height, samples, sampler):
+#     # bt.logging.info(f"calling stability for {prompt, seed, steps, cfg_scale, width, height, samples, sampler}")
+#     bt.logging.info(f"calling stability for {prompt[:50]}...")
 
-    # Run the synchronous stability_api.generate function in a separate thread
-    meta = await asyncio.to_thread(
-        stability_api.generate,
-        prompt=prompt,
-        seed=seed,
-        steps=steps,
-        cfg_scale=cfg_scale,
-        width=width,
-        height=height,
-        samples=samples,
-        # sampler=sampler,
-    )
+#     # Run the synchronous stability_api.generate function in a separate thread
+#     # meta = await asyncio.to_thread(
+#     #     stability_api.generate,
+#     #     prompt=prompt,
+#     #     seed=seed,
+#     #     steps=steps,
+#     #     cfg_scale=cfg_scale,
+#     #     width=width,
+#     #     height=height,
+#     #     samples=samples,
+#     #     # sampler=sampler,
+#     # )
 
-    # Convert image binary data to base64
-    b64s = [base64.b64encode(artifact.binary).decode() for image in meta for artifact in image.artifacts]
-    return b64s
+#     # Convert image binary data to base64
+#     b64s = [base64.b64encode(artifact.binary).decode() for image in meta for artifact in image.artifacts]
+#     return b64s
 
 
 
-# Github unauthorized rate limit of requests per hour is 60. Authorized is 5000.
+# # Github unauthorized rate limit of requests per hour is 60. Authorized is 5000.
 def get_version(line_number: int = 22) -> Optional[str]:
     url = "https://api.github.com/repos/corcel-api/cortex.t/contents/template/__init__.py"
     response = requests.get(url, timeout=10)

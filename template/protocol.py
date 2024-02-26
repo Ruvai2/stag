@@ -47,6 +47,13 @@ class GetToolList( bt.Synapse ):
         title="output",
         description="This returns the end result of the synapse process.",
     )
+
+class MinerInfo( bt.Synapse ):
+    uid: str = pydantic.Field(
+        ...,
+        title="uid",
+        description="Get Alive Miners status",
+    )
     
 class InterpreterRequests( bt.Synapse ):
     query: str = pydantic.Field(
