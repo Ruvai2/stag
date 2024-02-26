@@ -4,7 +4,7 @@ from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
 from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo
-from template.utils import call_openai
+from template.utils import call_openai,get_response_from_openai,fetch_ip
 import asyncio
 import torch
 import random
@@ -46,9 +46,29 @@ class GroupChatValidator(BaseValidator):
         except Exception as e:
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
 
-    async def get_res_from_open_ai(miner_tools_info, query):
-        prompt = """  """
-        openai_res = await call_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-3.5-turbo")
+    async def get_res_from_open_ai(self, query, miner_tools_info):
+        print(":::::::::::get_res_from_open_ai::::::::::::")
+        print(":::::::::::query::::::::::::", query)
+        print(":::::::::::miner_tools_info::::::::::::", miner_tools_info)
+
+        prompt_lines = [
+            f'Query: {query} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of Tool IDs.\n Tools available:'
+        ]
+        for tool in miner_tools_info:
+            description = tool.get('description', 'No description available.')
+            tool_info = f"""- Tool ID: {tool["id"]}, Description: {description}"""
+            prompt_lines.append(tool_info)
+        prompt = '\n'.join(prompt_lines)
+
+        print(":::::::::::prompt::::::::::::", prompt)
+        openai_res = await get_response_from_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-4")
+        print("::::::::::::::::openai_res:::::::::::", openai_res)
+        response_text = openai_res['text']
+        # You may need to parse this text if it's not already in the desired format
+        recommended_tool_ids = response_text
+
+        print("Recommended Tool IDs:", recommended_tool_ids)
+        return recommended_tool_ids
 
         
     async def request_for_miner(self, payload: dict):
@@ -78,8 +98,6 @@ class GroupChatValidator(BaseValidator):
                 chunk = embedded_text['vectorizedChunks'][0]
                 miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
             bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
-            print("::::::::::::SEND_RESPONSE_TO_OPENAI:::::::::::::::")
-            await self.get_res_from_open_ai(miner_tools_info)
             # check if the tool is alive
             alive_tools = await self.check_tool_alive(miner_tools_info, payload["group_id"])
             bt.logging.info(f"Alive Tools: {alive_tools}")
@@ -99,20 +117,33 @@ class GroupChatValidator(BaseValidator):
         print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
         return data_to_send
 
+    def create_global_agent_tool_association(self, data, agent_id):
+        global global_agent_tool_association
+        global_agent_tool_association = []
+        generate_res_for_orchestrator = []
+        for item in data:
+            tool_id = int(item['metadata']['toolId'])
+            miner_id = item['metadata']['uid']
+            global_agent_tool_association.append({
+                "agent_id": agent_id,
+                "tool_id": tool_id,
+                "miner_id": miner_id
+            })
+            generate_res_for_orchestrator.append(item['description'])
+        return generate_res_for_orchestrator
+
     async def request_for_tools_listing(self, payload: dict):
-        global miner_group_association
-        print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
-
-        #  will have to hit shivang api.......
-
-        tools_to_use = []
-        data_to_send = []
-        bt.logging.info(f"Received save_miner_info request. {payload}")
-        for tool in payload['tools']:
-            prompt = f"I have a query: {payload['problem_statement']} and I want to use {tool} to solve it."
+        try:
+            global miner_group_association
+            print("::::::::::::::miner_group_association::::::::::::::::::::",
+                  miner_group_association)
+            print(":::::::Payload:::::::", payload)
+            tools_to_use = []
+            bt.logging.info(f"Received save_miner_info request. {payload}")
+            prompt = f"I have a query: {payload['problem_statement']} and I want to use to solve it."
             payload_for_text_embedding = {
                 "account_id": config.dassi_vectorize_account_id,
-                "chunks": [   
+                "chunks": [
                     {
                         "id": "1",
                         "metadata": {
@@ -121,34 +152,33 @@ class GroupChatValidator(BaseValidator):
                     },
                 ]
             }
-            bt.logging.info(f"Received save_miner_info request. {payload_for_text_embedding}")
+            bt.logging.info(
+                f"Received save_miner_info request. {payload_for_text_embedding}")
             embedded_text = await vectorize_apis.convert_text_to_vector(payload_for_text_embedding)
-            # bt.logging.info(f"Embedded Text: {embedded_text}")
             miner_tools_info = []
             if len(embedded_text['vectorizedChunks']):
                 chunk = embedded_text['vectorizedChunks'][0]
                 miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
-            bt.logging.info(f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
+            bt.logging.info(
+                f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
             print("::::::::::::SEND_RESPONSE_TO_OPENAI:::::::::::::::")
-            await self.get_res_from_open_ai(miner_tools_info)
-            # check if the tool is alive
-            alive_tools = await self.check_tool_alive(miner_tools_info, payload["group_id"])
-            bt.logging.info(f"Alive Tools: {alive_tools}")
-            
-            # get the unique miner ids
-            if alive_tools and len(alive_tools):
-                random_alive_tool = random.choice(alive_tools)
-                print(":::::::::::::: random_alive_tool::::::::::::::::::::", random_alive_tool)
-                tools_to_use.append(random_alive_tool)
-                data_to_send.append({
-                    "groupId": random_alive_tool['groupId'],
-                    "agent_id": random_alive_tool['agent_id'],
-                })
-        
-        print("::::::::::::::tools_to_use::::::::::::::::::::", tools_to_use)
-        self.add_object(payload['group_id'], tools_to_use)
-        print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
-        return data_to_send
+            for tool in miner_tools_info:
+                tool['description'] = "I'm a python developer and I can easily write a code in python whatever you gave to me"
+            res = await self.get_res_from_open_ai(payload['problem_statement'],miner_tools_info)
+            # res = [{'id': '1002', 'metadata': {'url': '/another-example', 'uid': 16, 'toolId': '1002'}, 'score': 0.659303665,
+            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"},
+            #        {'id': '1001', 'metadata': {'url': '/example', 'uid': 16, 'toolId': '1001'}, 'score': 0.659303665,
+            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"},
+            #        {'id': '2-1001', 'metadata': {'name': 'open-interpreter', 'uid': 2, 'toolId': '1001'}, 'score': 0.59011085,
+            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"},
+            #        {'id': '16-1001', 'metadata': {'name': 'open-interpreter', 'uid': 16, 'toolId': '1001'}, 'score': 0.59011085,
+            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"}]
+            orchestrator_res = self.create_global_agent_tool_association(res, payload['agent_id'])
+            fetch_validator_ip = fetch_ip()
+            bt.logging.info(f"Alive Tools: {res}")
+            return {"ip": fetch_validator_ip, "tool_list": orchestrator_res}
+        except Exception as e:
+            print("::::request_for_tools_listing::::::::", e)
     
     def add_object(self, group_id, object_data):
         try:

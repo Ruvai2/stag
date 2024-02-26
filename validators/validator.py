@@ -258,7 +258,7 @@ validator_app.add_routes([
     web.post('/request_for_miner', handle_request_for_the_miner_agents),
     web.post('/tool_list', handle_get_miner_tool_list),
     web.post('/remove_miner', handle_remove_agent_request),
-    web.post('/request_tools_list', handle_request_for_the_tools_list)
+    web.post('/request_tools_list', handle_request_for_the_tools_list) # we got agent id and query.
 ])
 
 def main(run_aio_app=True, test=False) -> None:

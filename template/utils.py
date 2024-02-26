@@ -366,9 +366,11 @@ async def get_response_from_openai(messages, temperature, model, seed=1234, max_
                         'content': messages
             }]
         }
-        response =requests.post("https://openai.ru9.workers.dev/v1/chat/completions", headers=header, json=payload)
+
+        print("::::::::::payload:::::::::::",payload)
+        response = requests.post(
+            "https://openai.ru9.workers.dev/v1/chat/completions", headers=header, json=payload)
         response.raise_for_status()
-        print(':::::::::::RAW_RESPONSE:::get_response_from_openai_async::::::::', response.json())
         res_data = response.json()["choices"][0]["message"]["content"]
         return res_data
 
