@@ -19,10 +19,11 @@ from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
 from typing import Optional
 from stability_sdk import client as stability_client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
-
+import httpx
 import bittensor as bt
 import requests
 import wandb
+import socket
 
 import template
 
@@ -351,6 +352,31 @@ async def call_openai(messages, temperature, model, seed=1234, max_tokens=2048, 
         bt.logging.error(f"Error when calling OpenAI: {traceback.format_exc()}")
         await asyncio.sleep(0.5)
 
+async def get_response_from_openai(messages, temperature, model, seed=1234, max_tokens=2048, top_p=1):
+    try:
+        print(":::::INSIDE_THE_get_response_from_openai:::::::")
+        header = {"Content-Type": "application/json"}
+        payload = {
+            "model": "gpt-4",
+            'messages': [{
+                'role': 'system',
+                        'content': "You are a powerfull tools, you have to provide accurate and concise answers to the user's queries"
+            }, {
+                'role': 'user',
+                        'content': messages
+            }]
+        }
+        response =requests.post("https://openai.ru9.workers.dev/v1/chat/completions", headers=header, json=payload)
+        response.raise_for_status()
+        print(':::::::::::RAW_RESPONSE:::get_response_from_openai_async::::::::', response.json())
+        res_data = response.json()["choices"][0]["message"]["content"]
+        return res_data
+
+    except Exception as e:
+        bt.logging.error(
+            f"Error when calling OpenAI: {traceback.format_exc()}")
+        await asyncio.sleep(0.5)
+
 
 # anthropic = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
@@ -454,3 +480,18 @@ def send_discord_alert(message, webhook_url):
             print(f"Failed to send Discord alert. Status code: {response.status_code}")
     except Exception as e:
         print(f"Failed to send Discord alert: {e}", exc_info=True)
+
+
+def fetch_ip():
+    """Fetch the local IP address of the machine."""
+    try:
+        # Use a dummy UDP connection to find the local IP address
+        # The address 8.8.8.8 is used here as a target since it's the Google Public DNS;
+        # however, no actual connection is made.
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+        return local_ip
+    except Exception as e:
+        print(f"Failed to fetch local IP address: {e}")
+        return None
