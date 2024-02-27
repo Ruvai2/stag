@@ -19,7 +19,7 @@ import json
 global_agent_tool_association = []
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
 global_miner_details = {
-    1: {   
+    10: {   
         "ram_details": {
             "total_ram_mb": 16384.0,
             "available_ram_mb": 2780.812,
@@ -41,7 +41,7 @@ global_miner_details = {
         },
         "gpu_info": []
     },
-    2: {   
+    10: {   
         "ram_details": {
             "total_ram_mb": 16384.0,
             "available_ram_mb": 2780.812,
@@ -75,24 +75,16 @@ class GroupChatValidator(BaseValidator):
         bt.logging.info(f"Querying miner {miner_uid} with {syn}")
         return await self.dendrite([metagraph.axons[miner_uid]], syn, deserialize=False, timeout=self.timeout)
     
-    async def check_tool_alive(self, miner_tools_info, group_id):
+    async def check_tool_alive(self, tool, miner_id):
         try:
-            alive_tools_list = []
-            for tool in miner_tools_info:
-                syn = IsToolAlive(tool_id = tool['metadata']['toolId'])
-                bt.logging.info(f"Checking if the tool is alive {tool} {tool['metadata']['uid']}, syn: {syn}, {self.metagraph.axons[tool['metadata']['uid']]}")
-                responses = (await self.query_miner(self.metagraph, tool['metadata']['uid'], syn))[0]
-                bt.logging.info(f"Alive Tools: {responses}")
-                if responses.status is not None and responses.status['alive']:
-                    alive_tools_list.append({
-                        "groupId": group_id,
-                        "agent_id": utils.generate_agent_reference_id(),
-                        "tool_id": tool['metadata']['toolId'],
-                        "minerId": tool['metadata']['uid'],
-                        "status": "alive"
-                    })
-            bt.logging.info(f"Alive Tools: {alive_tools_list}")
-            return alive_tools_list
+            print(":::::::::::::::::::check_tool_alive::::::::::::::::",tool)
+            syn = IsToolAlive(tool_id = tool['tool_id'])
+            responses = (await self.query_miner(self.metagraph, miner_id, syn))[0]
+            bt.logging.info(f"Alive Tools: {responses}")
+            if responses.status is not None and responses.status['alive']:
+                return True
+            else :
+                return False
         except Exception as e:
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
 
@@ -178,7 +170,6 @@ class GroupChatValidator(BaseValidator):
 
     async def create_global_agent_tool_association(self, data, agent_id):
         global global_agent_tool_association
-        global_agent_tool_association = []
         generate_res_for_orchestrator = []
         bt.logging.info(":::::::::::::INSIDE_THE_create_global_agent_tool_association:::::::::")
         bt.logging.info(f":::::::::::::data::::::::: {data}")
@@ -188,8 +179,11 @@ class GroupChatValidator(BaseValidator):
                 raise TypeError(f"Expected a dict, got {type(item)}")
             global_agent_tool_association.append({
                 "agent_id": agent_id,
-                "tool_id": item['tool_id'],
-                "description": item['description']
+                # "tool_id": item['tool_id'],
+                "tool_id": "1001",
+                "description": item['description'],
+                "run_command":"DOCKER_CMD_TO_START",
+                "docker_file":"config/docker-compose.yaml",
             })
             generate_res_for_orchestrator.append(item.get('description'))
         return generate_res_for_orchestrator
@@ -476,6 +470,17 @@ class GroupChatValidator(BaseValidator):
                 return None, False, "Miner does not have enough available RAM."
         return random.choice(compatible_miners), True, "Miner has enough resources to run the tool."
         
+        
+    def get_tool_details_with_tool_id(self, tool_details, tool_id):
+        try:
+            for tool in tool_details:
+                if tool['tool_id'] == tool_id:
+                    return tool
+            return None
+        except Exception as e:
+            print("Error in get_tool_details_with_tool_id: ", e)
+            return None
+        
     def insert_miner_id_into_global_agent_tool_association(self, agent_id, miner_id):
         try:
             global global_agent_tool_association
@@ -501,14 +506,15 @@ class GroupChatValidator(BaseValidator):
             bt.logging.info(f"Tool Details: {type(tool)} {tool}")
             syn = RunToolRequest(tool_id=tool['tool_id'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
             response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
-            if response['success']:
-                alive_tool = self.check_tool_alive([tool])[0]
-                status_of_tool = True if alive_tool['alive'] else False
-                if status_of_tool:
+            if response.success:
+                print("::::::::::::: response.success: ::::::::::::", response)
+                print("::::::::::::: response.tool: ::::::::::::", response)
+                alive_tool = await self.check_tool_alive(tool, miner_id)
+                if alive_tool:
                     self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
                     return {"message": "Tool is running!"}
                 else:
-                    print({"message": "Tool is not running!"})
+                    return {"message": "Tool is not running!"}
         else: 
             return None
         
