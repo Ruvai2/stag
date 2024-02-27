@@ -1,5 +1,7 @@
 import aiohttp
 
+qdrant_api_base_url = "http://192.168.0.171:3000/vector"
+
 async def api_request_handler(**kwargs):
     """
     Request handler for the get query endpoint. This method handles the incoming requests and returns the response from the forward function.
@@ -48,6 +50,14 @@ async def get_vector_from_db(query_vector):
     try:
         vector_get_url =  f"https://daasi-vectorize.ru9.workers.dev/query"
         response = await api_request_handler(method="POST", url=vector_get_url, data={"values": query_vector})
+        return response
+    except Exception as e:
+        print(f"Error: {e}")
+        
+async def get_tool_from_vector_db(collection_name, tool_id):
+    try:
+        vector_get_url =  f"{qdrant_api_base_url}/{collection_name}/{tool_id}"
+        response = await api_request_handler(method="GET", url=vector_get_url)
         return response
     except Exception as e:
         print(f"Error: {e}")

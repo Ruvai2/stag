@@ -3,7 +3,6 @@ import random
 from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
-# from utils.tool_details import details
 from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest, DeleteToolRequest
 from template.utils import call_openai,get_response_from_openai,fetch_ip
 import asyncio
@@ -477,17 +476,6 @@ class GroupChatValidator(BaseValidator):
                 return None, False, "Miner does not have enough available RAM."
         return random.choice(compatible_miners), True, "Miner has enough resources to run the tool."
         
-        
-    def get_tool_details_with_tool_id(self, tool_details, tool_id):
-        try:
-            for tool in tool_details:
-                if tool['toolId'] == tool_id:
-                    return tool
-            return None
-        except Exception as e:
-            print("Error in get_tool_details_with_tool_id: ", e)
-            return None
-        
     def insert_miner_id_into_global_agent_tool_association(self, agent_id, miner_id):
         try:
             global global_agent_tool_association
@@ -509,13 +497,12 @@ class GroupChatValidator(BaseValidator):
         miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
         bt.logging.info(f"Status: {status}, Message: {message}, Miner ID: {miner_id}")
         if status:
-            tool_details = await vectorize_apis.get_vector_from_db(tool_id)
-            tool = self.get_tool_details_with_tool_id(tool_details, tool_id)
-            bt.logging.info(f"Tool Details: {tool}")
-            syn = RunToolRequest(tool_id=tool['toolId'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
+            tool = (await vectorize_apis.get_tool_from_vector_db(collection_name="tools", tool_id=tool_id))['data']['payload']
+            bt.logging.info(f"Tool Details: {type(tool)} {tool}")
+            syn = RunToolRequest(tool_id=tool['tool_id'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
             response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
             if response['success']:
-                alive_tool = self.check_tool_alive([tool], data['group_id'])[0]
+                alive_tool = self.check_tool_alive([tool])[0]
                 status_of_tool = True if alive_tool['alive'] else False
                 if status_of_tool:
                     self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
@@ -525,11 +512,17 @@ class GroupChatValidator(BaseValidator):
         else: 
             return None
         
+    async def set_weights_and_give_score(self):
+        return True
+        
     async def delete_tool(self, data):
         try:
-            tool_id = self.find_tool_id_by_agent_id(data['agent_id'])
+            global global_miner_details
+            tool_id, miner_id = self.find_tool_id_by_agent_id(data['agent_id'])
             syn = DeleteToolRequest(tool_id=tool_id)
-            miner_response = (await self.query_miner(self.metagraph, data['miner_id'], syn))[0]
+            miner_response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
+            global_miner_details[miner_id] = miner_response
+            await self.set_weights_and_give_score()
             return {"message": "Tool deleted!"}
         except Exception as e:
             print("Error in delete_tool: ", e)
