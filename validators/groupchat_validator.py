@@ -12,6 +12,7 @@ import template
 import aiohttp
 import asyncio
 from utils import utils
+import json
 
 miner_group_association = {}
 global_miner_details = []
@@ -52,23 +53,17 @@ class GroupChatValidator(BaseValidator):
         print(":::::::::::miner_tools_info::::::::::::", miner_tools_info)
 
         prompt_lines = [
-            f'Query: {query} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of Tool IDs.\n Tools available:'
+            'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id", "description" and "miner_id" in array of object and you have to send me array data nothing else.\n Tools available:'
         ]
+        prompt_lines[0] = prompt_lines[0].format(query)
         for tool in miner_tools_info:
             description = tool.get('description', 'No description available.')
-            tool_info = f"""- Tool ID: {tool["id"]}, Description: {description}"""
+            tool_info = f"- Tool ID: {tool['id']}, Description: {description}, miner_id: {tool['metadata']['uid']}"
             prompt_lines.append(tool_info)
         prompt = '\n'.join(prompt_lines)
-
-        print(":::::::::::prompt::::::::::::", prompt)
-        openai_res = await get_response_from_openai([{'role': "user", 'content': prompt}], 0.65, "gpt-4")
-        print("::::::::::::::::openai_res:::::::::::", openai_res)
-        response_text = openai_res['text']
-        # You may need to parse this text if it's not already in the desired format
-        recommended_tool_ids = response_text
-
-        print("Recommended Tool IDs:", recommended_tool_ids)
-        return recommended_tool_ids
+        openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
+        print("Recommended Tool IDs:", openai_res)
+        return openai_res
 
         
     async def request_for_miner(self, payload: dict):
@@ -117,19 +112,26 @@ class GroupChatValidator(BaseValidator):
         print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
         return data_to_send
 
-    def create_global_agent_tool_association(self, data, agent_id):
+    async def create_global_agent_tool_association(self, data, agent_id):
         global global_agent_tool_association
         global_agent_tool_association = []
         generate_res_for_orchestrator = []
-        for item in data:
-            tool_id = int(item['metadata']['toolId'])
-            miner_id = item['metadata']['uid']
+        print(":::::::::::::INSIDE_THE_create_global_agent_tool_association:::::::::")
+        print(":::::::::::::data:::::::::", data)
+        print('____________',type(data))
+        payload_data = json.loads(data)
+        print(":::::::::payload_data:::::::::",payload_data)
+        print(":::::::::type:::::::::",type(payload_data))
+        for item in payload_data:
+            if not isinstance(item, dict):
+                raise TypeError(f"Expected a dict, got {type(item)}")
+            print(">>>>>>>>>>>>>>>>",item['tool_id'])
             global_agent_tool_association.append({
                 "agent_id": agent_id,
-                "tool_id": tool_id,
-                "miner_id": miner_id
+                "tool_id": item['tool_id'],
+                "miner_id": item['miner_id'],
             })
-            generate_res_for_orchestrator.append(item['description'])
+            generate_res_for_orchestrator.append(item.get('description'))
         return generate_res_for_orchestrator
 
     async def request_for_tools_listing(self, payload: dict):
@@ -165,15 +167,8 @@ class GroupChatValidator(BaseValidator):
             for tool in miner_tools_info:
                 tool['description'] = "I'm a python developer and I can easily write a code in python whatever you gave to me"
             res = await self.get_res_from_open_ai(payload['problem_statement'],miner_tools_info)
-            # res = [{'id': '1002', 'metadata': {'url': '/another-example', 'uid': 16, 'toolId': '1002'}, 'score': 0.659303665,
-            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"},
-            #        {'id': '1001', 'metadata': {'url': '/example', 'uid': 16, 'toolId': '1001'}, 'score': 0.659303665,
-            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"},
-            #        {'id': '2-1001', 'metadata': {'name': 'open-interpreter', 'uid': 2, 'toolId': '1001'}, 'score': 0.59011085,
-            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"},
-            #        {'id': '16-1001', 'metadata': {'name': 'open-interpreter', 'uid': 16, 'toolId': '1001'}, 'score': 0.59011085,
-            #         'description': "I'm a python developer and I can easily write a code in python whatever you gave to me"}]
-            orchestrator_res = self.create_global_agent_tool_association(res, payload['agent_id'])
+            orchestrator_res = await self.create_global_agent_tool_association(res, payload['agent_id'])
+            print("::::::::::::::::orchestrator_res::::::::::::::::::::", orchestrator_res)
             fetch_validator_ip = fetch_ip()
             bt.logging.info(f"Alive Tools: {res}")
             return {"ip": fetch_validator_ip, "tool_list": orchestrator_res}
