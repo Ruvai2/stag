@@ -523,7 +523,7 @@ class GroupChatValidator(BaseValidator):
             miner_response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
             global_miner_details[miner_id] = miner_response
             await self.set_weights_and_give_score()
-            return {"message": "Tool deleted!"}
+            return {"message": "Tool deleted!", "conversation": user_group_conversation_thread}
         except Exception as e:
             print("Error in delete_tool: ", e)
             return {"message": "Tool not deleted!"}
