@@ -167,7 +167,7 @@ async def forward_query_request(request: web.Request):
         return web.Response(status=400, text="Bad request format")
     
     try:
-        return web.json_response(await group_chat_vali.get_group_chat_query(data))
+        return web.json_response(await group_chat_vali.send_query_to_miner(data))
     except Exception as e:
         bt.logging.error(f'Encountered in {forward_query_request.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
@@ -197,7 +197,7 @@ async def handle_request_for_the_tools_list(request: web.Request):
         return web.Response(status=400, text="Bad request format")
     
     try:
-       return web.json_response(await group_chat_vali.request_for_tools_listing(data))
+       return web.json_response(await group_chat_vali.process_tool_selection_request(data))
     except Exception as e:
         bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
@@ -258,7 +258,8 @@ validator_app.add_routes([
     web.post('/request_for_miner', handle_request_for_the_miner_agents),
     web.post('/tool_list', handle_get_miner_tool_list),
     web.post('/remove_miner', handle_remove_agent_request),
-    web.post('/request_tools_list', handle_request_for_the_tools_list) # we got agent id and query.
+    web.post('/request_tools_list', handle_request_for_the_tools_list), # we got agent id and query.
+    web.post('/query_to_resolve', forward_query_request),
 ])
 
 def main(run_aio_app=True, test=False) -> None:

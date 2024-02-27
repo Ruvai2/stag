@@ -16,6 +16,7 @@ import json
 
 miner_group_association = {}
 global_miner_details = []
+global_agent_tool_association = []
 
 class GroupChatValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet: bt.wallet):
@@ -47,18 +48,36 @@ class GroupChatValidator(BaseValidator):
         except Exception as e:
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
 
+    def get_tool_association_by_id(self, agent_id, tool_associations):
+        print(":::::::::::::::::::get_tool_association_by_id::::::::::::::::")
+        """
+        Find all objects in tool_associations with the given tool_id.
+
+        Parameters:
+        - tool_id (str): The tool ID to search for.
+        - tool_associations (list of dicts): The list of tool association objects.
+
+        Returns:
+        - list of dicts: A list of all matching tool association objects.
+        """
+        print("::::::::::::::tool_associations:::::::::", tool_associations)
+        matches = [item for item in tool_associations if item.get('agent_id') == agent_id]
+        if not matches:
+            return {} 
+        return matches[0]
+
     async def get_res_from_open_ai(self, query, miner_tools_info):
         print(":::::::::::get_res_from_open_ai::::::::::::")
         print(":::::::::::query::::::::::::", query)
         print(":::::::::::miner_tools_info::::::::::::", miner_tools_info)
 
         prompt_lines = [
-            'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id", "description" and "miner_id" in array of object and you have to send me array data nothing else.\n Tools available:'
+            'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data nothing else.\n Tools available:'
         ]
         prompt_lines[0] = prompt_lines[0].format(query)
         for tool in miner_tools_info:
             description = tool.get('description', 'No description available.')
-            tool_info = f"- Tool ID: {tool['id']}, Description: {description}, miner_id: {tool['metadata']['uid']}"
+            tool_info = f"- Tool ID: {tool['id']}, Description: {description}"
             prompt_lines.append(tool_info)
         prompt = '\n'.join(prompt_lines)
         openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
@@ -118,62 +137,73 @@ class GroupChatValidator(BaseValidator):
         generate_res_for_orchestrator = []
         print(":::::::::::::INSIDE_THE_create_global_agent_tool_association:::::::::")
         print(":::::::::::::data:::::::::", data)
-        print('____________',type(data))
         payload_data = json.loads(data)
-        print(":::::::::payload_data:::::::::",payload_data)
-        print(":::::::::type:::::::::",type(payload_data))
         for item in payload_data:
             if not isinstance(item, dict):
                 raise TypeError(f"Expected a dict, got {type(item)}")
-            print(">>>>>>>>>>>>>>>>",item['tool_id'])
             global_agent_tool_association.append({
                 "agent_id": agent_id,
                 "tool_id": item['tool_id'],
-                "miner_id": item['miner_id'],
+                "description": item['description']
             })
             generate_res_for_orchestrator.append(item.get('description'))
         return generate_res_for_orchestrator
 
-    async def request_for_tools_listing(self, payload: dict):
+    async def process_tool_selection_request(self, payload: dict):
+        """
+        Processes a request to list tools suitable for a given problem statement.
+        This involves generating a text embedding for the problem statement, retrieving matching tools based on this embedding, and selecting the appropriate tools to be used.
+
+        Parameters:
+        - payload (dict): The payload containing the 'problem_statement' and 'agent_id'.
+
+        Returns:
+        - dict: A dictionary with the IP of the validator and a list of tools to be used.
+        """
         try:
-            global miner_group_association
-            print("::::::::::::::miner_group_association::::::::::::::::::::",
-                  miner_group_association)
-            print(":::::::Payload:::::::", payload)
+            # Log the start of the method and the payload received
+            bt.logging.info(f"Starting process_tool_selection_request with payload: {payload}")
+
             tools_to_use = []
-            bt.logging.info(f"Received save_miner_info request. {payload}")
+
             prompt = f"I have a query: {payload['problem_statement']} and I want to use to solve it."
             payload_for_text_embedding = {
                 "account_id": config.dassi_vectorize_account_id,
-                "chunks": [
-                    {
-                        "id": "1",
-                        "metadata": {
-                            "context": prompt
-                        }
-                    },
-                ]
+                "chunks": [{"id": "1", "metadata": {"context": prompt}}],
             }
-            bt.logging.info(
-                f"Received save_miner_info request. {payload_for_text_embedding}")
+            bt.logging.info(f"Payload for text embedding: {payload_for_text_embedding}")
+
+            # Convert the problem statement text to a vector
             embedded_text = await vectorize_apis.convert_text_to_vector(payload_for_text_embedding)
             miner_tools_info = []
-            if len(embedded_text['vectorizedChunks']):
+
+            # Check if the embedding process returned vectorized chunks
+            if embedded_text['vectorizedChunks']:
                 chunk = embedded_text['vectorizedChunks'][0]
                 miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
-            bt.logging.info(
-                f"::::::::::::::miner_tools_info::::::::::::::::::::. {miner_tools_info}")
-            print("::::::::::::SEND_RESPONSE_TO_OPENAI:::::::::::::::")
+                bt.logging.info(f"Retrieved miner tools info based on vectorized chunk.")
+
+            # Add a default description to each tool for demonstration
             for tool in miner_tools_info:
                 tool['description'] = "I'm a python developer and I can easily write a code in python whatever you gave to me"
-            res = await self.get_res_from_open_ai(payload['problem_statement'],miner_tools_info)
+
+            # Retrieve recommendations from OpenAI based on the problem statement and tools info
+            res = await self.get_res_from_open_ai(payload['problem_statement'], miner_tools_info)
+
+            # Create global agent tool association based on the recommendations
             orchestrator_res = await self.create_global_agent_tool_association(res, payload['agent_id'])
-            print("::::::::::::::::orchestrator_res::::::::::::::::::::", orchestrator_res)
+            bt.logging.info(f"Completed tool association for agent_id: {payload['agent_id']}")
+
+            # Fetch the IP address of the validator
             fetch_validator_ip = fetch_ip()
-            bt.logging.info(f"Alive Tools: {res}")
+            bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
+
+            # Return the validator IP and the list of tools to be used
             return {"ip": fetch_validator_ip, "tool_list": orchestrator_res}
         except Exception as e:
-            print("::::request_for_tools_listing::::::::", e)
+            bt.logging.error(f"Error in process_tool_selection_request: {e}")
+            return {"error": f"An error occurred: {e}"}
+
     
     def add_object(self, group_id, object_data):
         try:
@@ -271,21 +301,35 @@ class GroupChatValidator(BaseValidator):
         bt.logging.info("interpreter_response: ", self.query_res)
         query_response = await self.send_res_to_group_chat()
         return query_response
-    
-    async def get_group_chat_query(self, data):
+
+    async def send_query_to_miner(self, data):
         """
-        Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+        Handles incoming query requests by fetching the appropriate tool details based on the agent_id and forwarding the query to the specified miner.
+
+        Parameters:
+        - data (dict): The incoming request data containing 'agent_id' and 'problem_statement'.
+
+        Returns:
+        - The response from the forwarded request to the specified miner.
         """
-        global miner_group_association
-        fetch_group_data = utils.get_object_by_group_and_agent(miner_group_association,data['agent']['groupId'],data['agent']['agent_id'])
-        bt.logging.info(f"Received query request. {miner_group_association}, {fetch_group_data}")
-        if fetch_group_data is None:
-            return {"message": "Agent not found"}
-        bt.logging.info(f"Received query request. {data}")
-        syn = InterpreterRequests(query=data['query'], miner_id=int(fetch_group_data['minerId']), tool_id=fetch_group_data['tool_id'])
-        response = await self.forward(syn, fetch_group_data['minerId'])
-        print("::::::::::::::::::::",miner_group_association, response)
-        return response
+        try:
+            bt.logging.info(f"Received query request: {data}")
+            
+            fetch_tool_detail = self.get_tool_association_by_id(data['agent_id'], global_agent_tool_association)
+            bt.logging.info(f"Fetched tool details: {fetch_tool_detail}")
+            fetch_tool_detail["miner_id"] = 10
+            if 'miner_id' not in fetch_tool_detail or 'tool_id' not in fetch_tool_detail:
+                raise ValueError("Missing 'miner_id' or 'tool_id' in fetched tool details.")
+
+            syn = InterpreterRequests(query=data['problem_statement'], miner_id=int(fetch_tool_detail['miner_id']), tool_id=fetch_tool_detail['tool_id'])
+
+            response = await self.forward(syn, fetch_tool_detail['miner_id'])
+            return response
+        except Exception as e:
+            # Handle any exceptions that occur during the process
+            bt.logging.error(f"Error handling group chat query: {e}")
+            return {"error": e}
+
     
     async def send_res_to_group_chat(self):
         try:
