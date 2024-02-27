@@ -3,20 +3,22 @@ import time
 import requests
 from validators import groupchat_validator
 
+groupchat_vali = groupchat_validator.GroupChatValidator()
+
 def tool_list_api():
     try:
         print("Pinging miners")
-        url = "http://0.0.0.0:8080/tool_list"
-        requests.post(url)
+        groupchat_vali.get_miner_tool_list()
     except Exception as e:
         print(f"Error: {e}")
 
 def miner_info():
     try:
         print(":::::: Get miner info :::::::")
-        groupchat_validator.fetch_miner_details()
+        groupchat_vali.fetch_miner_details()
     except Exception as e:
         print(f"Error: {e}")
+        
 def start_pinging():
     print("Starting pinging")
     schedule.every(1).hour.do(tool_list_api)

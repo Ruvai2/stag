@@ -47,7 +47,41 @@ class GetToolList( bt.Synapse ):
         title="output",
         description="This returns the end result of the synapse process.",
     )
-
+     
+class RunToolRequest( bt.Synapse ):
+    run_commands: str = pydantic.Field(
+        ...,
+        title="Run Commands for docker file",
+        description="The commands to run the tool."
+    )
+    docker_file: str = pydantic.Field(
+        ...,
+        title="Docker File",
+        description="The docker file to run the tool."
+    )
+    tool_id: str = pydantic.Field(
+        ...,
+        title="Tool ID",
+        description="The ID of the tool."
+    )
+    success: Optional[bool] = pydantic.Field(
+        default=False,
+        title="Success",
+        description="The success of the tool."
+    )
+    
+class DeleteToolRequest( bt.Synapse ):
+    tool_id: str = pydantic.Field(
+        ...,
+        title="Tool ID",
+        description="The ID of the tool to delete."
+    )
+    success: Optional[bool] = pydantic.Field(
+        default=False,
+        title="Success",
+        description="The success of the tool."
+    )
+    
 class MinerInfo( bt.Synapse ):
     uid: str = pydantic.Field(
         ...,
@@ -202,7 +236,7 @@ class Embeddings( bt.Synapse):
         description="The resulting list of embeddings, each corresponding to an input text."
     )
     
-class Dummy( bt.Synapse):
+class Dummy( bt.Synapse ):
     """ A class to represent the dummy request and response. """
 
     text: str = pydantic.Field(
