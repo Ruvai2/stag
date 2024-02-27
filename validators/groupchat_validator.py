@@ -4,7 +4,7 @@ from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
 from utils.tool_details import details
-from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest
+from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest, DeleteToolRequest
 from template.utils import call_openai
 import asyncio
 import torch
@@ -15,61 +15,58 @@ import asyncio
 from utils import utils
 
 miner_group_association = {}
-global_miner_details = [{   
-    "agentId": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b1",
-    "minerId": 16,
-    "ram_details": {
-        "total_ram_mb": 16384.0,
-        "available_ram_mb": 2780.812,
-        "utilized_ram_percent": 83.0
+global_miner_details = {
+    1: {   
+        "ram_details": {
+            "total_ram_mb": 16384.0,
+            "available_ram_mb": 2780.812,
+            "utilized_ram_percent": 83.0
+        },
+        "cpu_info": {
+            "num_logical_cores": 8,
+            "num_physical_cores": 8,
+            "cpu_percent_each_core": [
+                41.5,
+                40.4,
+                35.8,
+                37.5,
+                52.0,
+                42.4,
+                38.4,
+                32.3
+            ]
+        },
+        "gpu_info": []
     },
-    "cpu_info": {
-        "num_logical_cores": 8,
-        "num_physical_cores": 8,
-        "cpu_percent_each_core": [
-            41.5,
-            40.4,
-            35.8,
-            37.5,
-            52.0,
-            42.4,
-            38.4,
-            32.3
-        ]
-    },
-    "gpu_info": []
-},{   
-    "agentId": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b6",
-    "minerId": 17,
-    "ram_details": {
-        "total_ram_mb": 16384.0,
-        "available_ram_mb": 2780.812,
-        "utilized_ram_percent": 83.0
-    },
-    "cpu_info": {
-        "num_logical_cores": 8,
-        "num_physical_cores": 8,
-        "cpu_percent_each_core": [
-            41.5,
-            40.4,
-            35.8,
-            37.5,
-            52.0,
-            42.4,
-            38.4,
-            32.3
-        ]
-    },
-    "gpu_info": []
-},
-]
+    2: {   
+        "ram_details": {
+            "total_ram_mb": 16384.0,
+            "available_ram_mb": 2780.812,
+            "utilized_ram_percent": 83.0
+        },
+        "cpu_info": {
+            "num_logical_cores": 8,
+            "num_physical_cores": 8,
+            "cpu_percent_each_core": [
+                41.5,
+                40.4,
+                35.8,
+                37.5,
+                52.0,
+                42.4,
+                38.4,
+                32.3
+            ]
+        },
+        "gpu_info": []
+    }
+}
 
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
 
 global_agent_tool_association = [{
     "agent_id": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b1",
     "tool_id": 1001,
-    "miner_id": 16
 }]
 
 class GroupChatValidator(BaseValidator):
@@ -232,12 +229,12 @@ class GroupChatValidator(BaseValidator):
         return self.all_uids
     
     async def fetch_miner_details(self):
+        global global_miner_details
         for miner_id in self.get_valid_miners_info():
             syn = MinerInfo(uid=miner_id)
             bt.logging.info(f"Received get_miner_tool_list request. {syn}, miner_id: {miner_id}")
             miner_details = (await self.query_miner(self.metagraph, miner_id, syn))[0]
-            miner_details['agent_id'] = utils.generate_agent_reference_id()
-            global_miner_details.append(miner_details)
+            global_miner_details[miner_id] = miner_details
             bt.logging.info(f"Miner List: {miner_details}")
         return 
 
@@ -393,29 +390,29 @@ class GroupChatValidator(BaseValidator):
         try:
             for obj in global_agent_tool_association:
                 if obj['agent_id'] == agent_id:
-                    return obj['tool_id'], obj['miner_id']
+                    return obj['tool_id']
             return None
         except Exception as e:
             print("Error in find_tool_id_by_agent_id: ", e)
             return None
        
     # Define a function to find the miner and check for available resources
-    def find_miner_and_check_resources(self, miner_details, miner_id, tool_benchmark):
-        # Search for the miner
-        miner_data = next((miner for miner in miner_details if miner["minerId"] == miner_id), None)
+    def find_miner_and_check_resources(self, tool_benchmark):
+        global global_miner_details
         
-        if miner_data:
+        compatible_miners = []
+        for miner_id, miner_data in global_miner_details.items():
             # Check if the miner has enough available RAM to run the tool
             if miner_data["ram_details"]["available_ram_mb"] >= tool_benchmark["ram"]:
                 # Check if a GPU is required and if the miner has it
                 if tool_benchmark["gpu"] is None or (tool_benchmark["gpu"] and len(miner_data["gpu_info"]) > 0):
-                    return True, "Miner has enough resources to run the tool."
+                    compatible_miners.append(miner_id)
                 else:
-                    return False, "Miner does not have the required GPU."
+                    return None, False, "Miner does not have the required GPU."
             else:
-                return False, "Miner does not have enough available RAM."
-        else:
-            return False, "Miner not found."
+                return None, False, "Miner does not have enough available RAM."
+        return random.choice(compatible_miners), True, "Miner has enough resources to run the tool."
+        
         
     def get_tool_details_with_tool_id(self, tool_details, tool_id):
         try:
@@ -427,13 +424,27 @@ class GroupChatValidator(BaseValidator):
             print("Error in get_tool_details_with_tool_id: ", e)
             return None
         
+    def insert_miner_id_into_global_agent_tool_association(self, agent_id, miner_id):
+        try:
+            global global_agent_tool_association
+            for obj in global_agent_tool_association:
+                if obj['agent_id'] == agent_id:
+                    obj['miner_id'] = miner_id
+                    return True
+            return True
+        except Exception as e:
+            print("Error in insert_miner_id_into_global_agent_tool_association: ", e)
+            return False
+        
+        
     async def run_tool(self, data):
-        global global_miner_details
-        tool_id, miner_id = self.find_tool_id_by_agent_id(data['agent_id'])
-        bt.logging.info(f"Tool ID: {tool_id}, Miner ID: {miner_id}")
-        status, message = self.find_miner_and_check_resources(global_miner_details, miner_id, { "cup": 1, "gpu": None, "ram": 1024,})
-        bt.logging.info(f"Status: {status}, Message: {message}")
-        if(status):
+        tool_id = self.find_tool_id_by_agent_id(data['agent_id'])
+        # get the tool benchmark details using tool_id
+        tool_benchmark_deatils = { "cup": 1, "gpu": None, "ram": 1024,}
+        bt.logging.info(f"Tool ID: {tool_id}")
+        miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
+        bt.logging.info(f"Status: {status}, Message: {message}, Miner ID: {miner_id}")
+        if status:
             tool_details = await vectorize_apis.get_vector_from_db(tool_id)
             tool = self.get_tool_details_with_tool_id(tool_details, tool_id)
             bt.logging.info(f"Tool Details: {tool}")
@@ -443,11 +454,22 @@ class GroupChatValidator(BaseValidator):
                 alive_tool = self.check_tool_alive([tool], data['group_id'])[0]
                 status_of_tool = True if alive_tool['alive'] else False
                 if status_of_tool:
-                    print({"message": "Tool is running!"})
+                    self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
+                    return {"message": "Tool is running!"}
                 else:
                     print({"message": "Tool is not running!"})
         else: 
             return None
+        
+    async def delete_tool(self, data):
+        try:
+            tool_id = self.find_tool_id_by_agent_id(data['agent_id'])
+            syn = DeleteToolRequest(tool_id=tool_id)
+            miner_response = (await self.query_miner(self.metagraph, data['miner_id'], syn))[0]
+            return {"message": "Tool deleted!"}
+        except Exception as e:
+            print("Error in delete_tool: ", e)
+            return {"message": "Tool not deleted!"}
     
     async def score_responses(
         self,

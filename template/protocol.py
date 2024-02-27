@@ -70,6 +70,18 @@ class RunToolRequest( bt.Synapse ):
         description="The success of the tool."
     )
     
+class DeleteToolRequest( bt.Synapse ):
+    tool_id: str = pydantic.Field(
+        ...,
+        title="Tool ID",
+        description="The ID of the tool to delete."
+    )
+    success: Optional[bool] = pydantic.Field(
+        default=False,
+        title="Success",
+        description="The success of the tool."
+    )
+    
 class MinerInfo( bt.Synapse ):
     uid: str = pydantic.Field(
         ...,

@@ -249,6 +249,21 @@ async def handle_request_run_tool(request: web.Request):
         bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
 
+async def handle_request_for_delete_tool(request: web.Request):
+    """
+    Get query request handler. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+        return web.json_response(await group_chat_vali.delete_tool(data))
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+
 class ValidatorApplication(web.Application):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -264,6 +279,7 @@ validator_app.add_routes([
     web.post('/remove_miner', handle_remove_agent_request),
     web.post('/request_tools_list', handle_request_for_the_tools_list),
     web.post('/request_run_tool', handle_request_run_tool),
+    web.post('/request_delete_tool', handle_request_for_delete_tool)
 ])
 
 def main(run_aio_app=True, test=False) -> None:
