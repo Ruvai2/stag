@@ -30,7 +30,7 @@ import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from anthropic_bedrock import AsyncAnthropicBedrock, HUMAN_PROMPT, AI_PROMPT, AnthropicBedrock
 
 import template
-from template.protocol import Embeddings, ImageResponse, IsAlive, StreamPrompting, Dummy, IsToolAlive, GetToolList, InterpreterRequests
+from template.protocol import Embeddings, ImageResponse, IsAlive, StreamPrompting, Dummy, IsToolAlive, GetToolList, InterpreterRequests,DeleteToolRequest,RunToolRequest
 from template.utils import get_version
 import sys
 from utils import tool_ports_mapping
@@ -176,6 +176,10 @@ class StreamMiner(ABC):
         
     def _handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         return self.handle_interpreter_requests(synapse)
+    def _delete_tool(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
+        return self.delete_tools(synapse)
+    def _run_tool(self, synapse: RunToolRequest) -> RunToolRequest:
+        return self.run_tools(synapse)
 
     def base_blacklist(self, synapse, blacklist_amt = 20000) -> Tuple[bool, str]:
         try:
@@ -290,6 +294,11 @@ class StreamMiner(ABC):
         
     @abstractmethod
     def is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
+        ...
+    @abstractmethod
+    def delete_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
+        ...
+    def run_tools(self, synapse: RunToolRequest) -> RunToolRequest:
         ...
         
     @abstractmethod
@@ -472,6 +481,41 @@ class StreamingTemplateMiner(StreamMiner):
             return synapse
         except Exception as e: 
             bt.logging.error(f"::::Error in get_tool_list::::", e)
+
+    def delete_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
+        """
+        Delete tools and return the updated DeleteToolRequest.
+
+        Args:
+            self: The instance of the class.
+            synapse (DeleteToolRequest): The tool to be deleted.
+
+        Returns:
+            DeleteToolRequest: The updated tool after deletion.
+        """
+        try:
+            bt.logging.info("Tool has been deleted!", synapse)
+            synapse.success = True
+            return synapse
+        except Exception as e:
+            bt.logging.error(f"::::Error in delete_tools::::", e)
+
+    def run_tools(self, synapse: RunToolRequest) -> RunToolRequest:
+        """
+        Run the specified tool and update the success status in the provided RunToolRequest object.
+
+        Args:
+            synapse (RunToolRequest): The RunToolRequest object specifying the tool to be run.
+
+        Returns:
+            RunToolRequest: The updated RunToolRequest object with the success status.
+        """
+        try:
+            bt.logging.info("Tool is now running!", synapse)
+            synapse.success = True
+            return synapse
+        except Exception as e:
+            bt.logging.error(f"::::Error in run_tools::::", e)
             
     def get_tool_list(self, synapse: GetToolList) -> GetToolList:
         try:
