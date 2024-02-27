@@ -3,7 +3,7 @@ import random
 from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
-from utils.tool_details import details
+# from utils.tool_details import details
 from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest, DeleteToolRequest
 from template.utils import call_openai,get_response_from_openai,fetch_ip
 import asyncio
