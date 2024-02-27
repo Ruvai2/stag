@@ -338,8 +338,18 @@ class GroupChatValidator(BaseValidator):
         bt.logging.info("interpreter_response", response)
         self.query_res = response
         bt.logging.info("interpreter_response: ", self.query_res)
-        query_response = await self.send_res_to_group_chat()
-        return query_response
+
+        # For a while time
+        async with aiohttp.ClientSession() as session:
+                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
+                    if response.status == 200:
+                        bt.logging.info("Successfully called the group chat:::::")
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
+                        bt.logging.error("Failed to call the group chat:::::")
+        return "Successfully called the group chat:::::"
+        # query_response = await self.send_res_to_group_chat()
+        # return query_response
 
     async def send_query_to_miner(self, data):
         """
@@ -402,12 +412,12 @@ class GroupChatValidator(BaseValidator):
             responses = await self.query_miner(self.metagraph, miner_id, syn)
             res_string  = responses[0]
             bt.logging.info(":::::::::::::::res_string:::::::::::::::::", res_string)
-            if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
-                self.query_res = res_string.output
-                await self.send_res_to_group_chat()
-                return
-            else:
-                return responses
+            # if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
+            #     self.query_res = res_string.output
+            #     await self.send_res_to_group_chat()
+            #     return
+            # else:
+            return responses
         except Exception as e:
             bt.logging.error(f":::::Error while sending dendrite::::::: {e}")
             

@@ -533,17 +533,45 @@ class StreamingTemplateMiner(StreamMiner):
         except Exception as e: 
             bt.logging.error(f"::::Error in get_tool_list::::", e)
             
+    def generate_response_from_openai(self,data):
+        try:
+            header = {"Content-Type": "application/json"}
+            payload = {
+                "model": "gpt-4",
+                'messages': [{
+                    'role': 'system',
+                            'content': "You are a powerfull tools, you have to provide accurate and concise answers to the user's queries"
+                }, {
+                    'role': 'user',
+                            'content': data
+                }]
+            }
+
+            print("::::::::::payload:::::::::::",payload)
+            response = requests.post("https://openai.ru9.workers.dev/v1/chat/completions", headers=header, json=payload)
+            response.raise_for_status()
+            res_data = response.json()["choices"][0]["message"]["content"]
+            print(":::::::::res_data:::::::::::",res_data)
+            requests.post("http://127.0.0.1:8080/webhook",headers=header, json=res_data)
+            return "Success"
+            
+        except Exception as e:
+            bt.logging.error(f"::::Error in handle_interpreter_requests::::", e)
     def handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         try:
             bt.logging.info(f"received interpreter request: {synapse}")
-            interpreter_tool_response = self.interpreter_agent_request({
-                "query": synapse.query,
-                "summary": synapse.summary,
-                "tool_id": synapse.tool_id,
-                "miner_id": synapse.miner_id
-            })
-            synapse.output = interpreter_tool_response
+            get_openai_res = self.generate_response_from_openai(synapse.query)
+            synapse.output = {'key': 'INTERPRETER_PROCESSING'}
             return synapse
+            # bt.logging.info(f"received interpreter request: {synapse}")
+            # interpreter_tool_response = self.interpreter_agent_request({
+            #     "query": synapse.query,
+            #     "summary": synapse.summary,
+            #     "tool_id": synapse.tool_id,
+            #     "miner_id": synapse.miner_id
+            # })
+            # synapse.output = interpreter_tool_response
+            # return synapse
         except Exception as e:
             bt.logging.error(f"::::Error in handle_interpreter_requests::::", e)
             
