@@ -501,7 +501,28 @@ class StreamingTemplateMiner(StreamMiner):
         """
         try:
             bt.logging.info("Tool has been deleted!", synapse)
-            synapse.success = True
+            synapse.system_resource_data = {   
+                "ram_details": {
+                    "total_ram_mb": 16384.0,
+                    "available_ram_mb": 2780.812,
+                    "utilized_ram_percent": 83.0
+                },
+                "cpu_info": {
+                    "num_logical_cores": 8,
+                    "num_physical_cores": 8,
+                    "cpu_percent_each_core": [
+                        41.5,
+                        40.4,
+                        35.8,
+                        37.5,
+                        52.0,
+                        42.4,
+                        38.4,
+                        32.3
+                    ]
+                },
+                "gpu_info": []
+            }
             return synapse
         except Exception as e:
             bt.logging.error(f"::::Error in delete_tools::::", e)

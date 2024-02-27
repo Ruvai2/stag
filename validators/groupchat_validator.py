@@ -19,7 +19,7 @@ import json
 global_agent_tool_association = []
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
 global_miner_details = {
-    10: {   
+    16: {   
         "ram_details": {
             "total_ram_mb": 16384.0,
             "available_ram_mb": 2780.812,
@@ -41,28 +41,6 @@ global_miner_details = {
         },
         "gpu_info": []
     },
-    10: {   
-        "ram_details": {
-            "total_ram_mb": 16384.0,
-            "available_ram_mb": 2780.812,
-            "utilized_ram_percent": 83.0
-        },
-        "cpu_info": {
-            "num_logical_cores": 8,
-            "num_physical_cores": 8,
-            "cpu_percent_each_core": [
-                41.5,
-                40.4,
-                35.8,
-                37.5,
-                52.0,
-                42.4,
-                38.4,
-                32.3
-            ]
-        },
-        "gpu_info": []
-    }
 }
 
 
@@ -455,9 +433,10 @@ class GroupChatValidator(BaseValidator):
     
     def find_tool_id_by_agent_id(self, agent_id):
         try:
+            global global_agent_tool_association
             for obj in global_agent_tool_association:
                 if obj['agent_id'] == agent_id:
-                    return obj['tool_id']
+                    return obj
             return None
         except Exception as e:
             print("Error in find_tool_id_by_agent_id: ", e)
@@ -505,7 +484,7 @@ class GroupChatValidator(BaseValidator):
         
         
     async def run_tool(self, data):
-        tool_id = self.find_tool_id_by_agent_id(data['agent_id'])
+        tool_id = (self.find_tool_id_by_agent_id(data['agent_id']))['tool_id']
         # get the tool benchmark details using tool_id
         tool_benchmark_deatils = { "cup": 1, "gpu": None, "ram": 1024,}
         bt.logging.info(f"Tool ID: {tool_id}")
@@ -534,10 +513,11 @@ class GroupChatValidator(BaseValidator):
     async def delete_tool(self, data):
         try:
             global global_miner_details
-            tool_id, miner_id = self.find_tool_id_by_agent_id(data['agent_id'])
-            syn = DeleteToolRequest(tool_id=tool_id)
-            miner_response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
-            global_miner_details[miner_id] = miner_response
+            bt.logging.info(f":::::::::::::data::::::::: {data}")
+            local_data = self.find_tool_id_by_agent_id(data['agent_id'])
+            syn = DeleteToolRequest(tool_id=local_data['tool_id'])
+            miner_response = (await self.query_miner(self.metagraph, local_data['miner_id'], syn))[0]
+            global_miner_details[local_data['miner_id']] = miner_response.system_resource_data
             await self.set_weights_and_give_score()
             return {"message": "Tool deleted!", "conversation": user_group_conversation_thread}
         except Exception as e:

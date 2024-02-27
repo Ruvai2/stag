@@ -76,10 +76,10 @@ class DeleteToolRequest( bt.Synapse ):
         title="Tool ID",
         description="The ID of the tool to delete."
     )
-    success: Optional[bool] = pydantic.Field(
-        default=False,
-        title="Success",
-        description="The success of the tool."
+    system_resource_data: Optional[dict] = pydantic.Field(
+        None,
+        title="System Resource Data",
+        description="The system resource data of the tool."
     )
     
 class MinerInfo( bt.Synapse ):
