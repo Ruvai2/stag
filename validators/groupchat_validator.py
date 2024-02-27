@@ -49,7 +49,7 @@ class GroupChatValidator(BaseValidator):
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
 
     def get_tool_association_by_id(self, agent_id, tool_associations):
-        print(":::::::::::::::::::get_tool_association_by_id::::::::::::::::")
+        bt.logging.info(":::::::::::::::::::get_tool_association_by_id::::::::::::::::")
         """
         Find all objects in tool_associations with the given tool_id.
 
@@ -60,16 +60,14 @@ class GroupChatValidator(BaseValidator):
         Returns:
         - list of dicts: A list of all matching tool association objects.
         """
-        print("::::::::::::::tool_associations:::::::::", tool_associations)
+        bt.logging.info(f"::::::::::::::tool_associations::::::::: {tool_associations}")
         matches = [item for item in tool_associations if item.get('agent_id') == agent_id]
         if not matches:
             return {} 
         return matches[0]
 
     async def get_res_from_open_ai(self, query, miner_tools_info):
-        print(":::::::::::get_res_from_open_ai::::::::::::")
-        print(":::::::::::query::::::::::::", query)
-        print(":::::::::::miner_tools_info::::::::::::", miner_tools_info)
+        bt.logging.info(":::::::::::get_res_from_open_ai::::::::::::")
 
         prompt_lines = [
             'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data nothing else.\n Tools available:'
@@ -81,13 +79,13 @@ class GroupChatValidator(BaseValidator):
             prompt_lines.append(tool_info)
         prompt = '\n'.join(prompt_lines)
         openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
-        print("Recommended Tool IDs:", openai_res)
+        bt.logging.info(f"Recommended Tool IDs: {openai_res}")
         return openai_res
 
         
     async def request_for_miner(self, payload: dict):
         global miner_group_association
-        print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
+        bt.logging.info(f"::::::::::::::miner_group_association:::::::::::::::::::: {miner_group_association}")
         tools_to_use = []
         data_to_send = []
         bt.logging.info(f"Received save_miner_info request. {payload}")
@@ -126,17 +124,16 @@ class GroupChatValidator(BaseValidator):
                     "agent_id": random_alive_tool['agent_id'],
                 })
         
-        print("::::::::::::::tools_to_use::::::::::::::::::::", tools_to_use)
+        bt.logging.info(f"::::::::::::::tools_to_use:::::::::::::::::::: {tools_to_use}")
         self.add_object(payload['group_id'], tools_to_use)
-        print("::::::::::::::miner_group_association::::::::::::::::::::", miner_group_association)
         return data_to_send
 
     async def create_global_agent_tool_association(self, data, agent_id):
         global global_agent_tool_association
         global_agent_tool_association = []
         generate_res_for_orchestrator = []
-        print(":::::::::::::INSIDE_THE_create_global_agent_tool_association:::::::::")
-        print(":::::::::::::data:::::::::", data)
+        bt.logging.info(":::::::::::::INSIDE_THE_create_global_agent_tool_association:::::::::")
+        bt.logging.info(f":::::::::::::data::::::::: {data}")
         payload_data = json.loads(data)
         for item in payload_data:
             if not isinstance(item, dict):
@@ -335,18 +332,18 @@ class GroupChatValidator(BaseValidator):
         try:
             while self.query_res["key"] == "INTERPRETER_PROCESSING":
                 # Wait until the key becomes "INTEPRETR_PROGESS"
-                print("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
+                bt.logging.info("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
                 await asyncio.sleep(10)
             async with aiohttp.ClientSession() as session:
                 async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
                     if response.status == 200:
-                        print("Successfully called the group chat:::::")
+                        bt.logging.info("Successfully called the group chat:::::")
                     else:
                         print(f"Error: {response.status}, {await response.text()}")
-                        print("Failed to call the group chat:::::")
+                        bt.logging.error("Failed to call the group chat:::::")
             return "Successfully called the group chat:::::"
         except Exception as e:
-            print(":::::Error send_res_to_group_chat:::::::", e)
+            bt.logging.error(f":::::Error send_res_to_group_chat::::::: {e}")
             
     async def forward(self, syn: InterpreterRequests, miner_id: int):
         """
@@ -358,11 +355,11 @@ class GroupChatValidator(BaseValidator):
             self (:obj:`bittensor.neuron.Neuron`): The neuron object which contains all the necessary state for the validator.
 
         """
-        print("::::::::::::::SELF.QUERY::::::::::::::::::", syn)
+        bt.logging.info(f"::::::::::::::SELF.QUERY:::::::::::::::::: {syn}")
         try:
             responses = await self.query_miner(self.metagraph, miner_id, syn)
             res_string  = responses[0]
-            bt.logging.info("::::::::::::::: res_string:::::::::::::::::", res_string)
+            bt.logging.info(":::::::::::::::res_string:::::::::::::::::", res_string)
             if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
                 self.query_res = res_string.output
                 await self.send_res_to_group_chat()
@@ -370,7 +367,7 @@ class GroupChatValidator(BaseValidator):
             else:
                 return responses
         except Exception as e:
-            print(":::::Error while sending dendrite:::::::",e)
+            bt.logging.error(f":::::Error while sending dendrite::::::: {e}")
             
     
     async def remove_agent_from_global_object(self, all_agents_detail, group_id, agent_id):
