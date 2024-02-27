@@ -3,6 +3,7 @@ import random
 from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
+from utils.tool_details import details
 from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest
 from template.utils import call_openai
 import asyncio
@@ -14,7 +15,57 @@ import asyncio
 from utils import utils
 
 miner_group_association = {}
-global_miner_details = []
+global_miner_details = [{   
+    "agentId": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b1",
+    "minerId": 16,
+    "ram_details": {
+        "total_ram_mb": 16384.0,
+        "available_ram_mb": 2780.812,
+        "utilized_ram_percent": 83.0
+    },
+    "cpu_info": {
+        "num_logical_cores": 8,
+        "num_physical_cores": 8,
+        "cpu_percent_each_core": [
+            41.5,
+            40.4,
+            35.8,
+            37.5,
+            52.0,
+            42.4,
+            38.4,
+            32.3
+        ]
+    },
+    "gpu_info": []
+},{   
+    "agentId": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b6",
+    "minerId": 17,
+    "ram_details": {
+        "total_ram_mb": 16384.0,
+        "available_ram_mb": 2780.812,
+        "utilized_ram_percent": 83.0
+    },
+    "cpu_info": {
+        "num_logical_cores": 8,
+        "num_physical_cores": 8,
+        "cpu_percent_each_core": [
+            41.5,
+            40.4,
+            35.8,
+            37.5,
+            52.0,
+            42.4,
+            38.4,
+            32.3
+        ]
+    },
+    "gpu_info": []
+},
+]
+
+user_group_conversation_thread = [] # [{user, group}, {user, group}]
+
 global_agent_tool_association = [{
     "agent_id": "2dfa2ec9-eeb9-4d10-9fc6-9a948b8915b1",
     "tool_id": 1001,
@@ -29,7 +80,6 @@ class GroupChatValidator(BaseValidator):
     async def query_miner(self, metagraph, miner_uid, syn):
         bt.logging.info(f"Querying miner {miner_uid} with {syn}")
         return await self.dendrite([metagraph.axons[miner_uid]], syn, deserialize=False, timeout=self.timeout)
-    
     
     async def check_tool_alive(self, miner_tools_info, group_id):
         try:
@@ -307,8 +357,7 @@ class GroupChatValidator(BaseValidator):
                 return responses
         except Exception as e:
             print(":::::Error while sending dendrite:::::::",e)
-            
-    
+              
     async def remove_agent_from_global_object(self, all_agents_detail, group_id, agent_id):
         try:
             removed_objects = []
@@ -349,14 +398,56 @@ class GroupChatValidator(BaseValidator):
         except Exception as e:
             print("Error in find_tool_id_by_agent_id: ", e)
             return None
+       
+    # Define a function to find the miner and check for available resources
+    def find_miner_and_check_resources(self, miner_details, miner_id, tool_benchmark):
+        # Search for the miner
+        miner_data = next((miner for miner in miner_details if miner["minerId"] == miner_id), None)
+        
+        if miner_data:
+            # Check if the miner has enough available RAM to run the tool
+            if miner_data["ram_details"]["available_ram_mb"] >= tool_benchmark["ram"]:
+                # Check if a GPU is required and if the miner has it
+                if tool_benchmark["gpu"] is None or (tool_benchmark["gpu"] and len(miner_data["gpu_info"]) > 0):
+                    return True, "Miner has enough resources to run the tool."
+                else:
+                    return False, "Miner does not have the required GPU."
+            else:
+                return False, "Miner does not have enough available RAM."
+        else:
+            return False, "Miner not found."
+        
+    def get_tool_details_with_tool_id(self, tool_details, tool_id):
+        try:
+            for tool in tool_details:
+                if tool['toolId'] == tool_id:
+                    return tool
+            return None
+        except Exception as e:
+            print("Error in get_tool_details_with_tool_id: ", e)
+            return None
         
     async def run_tool(self, data):
+        global global_miner_details
         tool_id, miner_id = self.find_tool_id_by_agent_id(data['agent_id'])
-        tool_details = await vectorize_apis.get_vector_from_db(tool_id)
-        syn = RunToolRequest(tool_id=tool_id, command=tool_details['run_commands']['command'], docker_file=tool_details['docker_file'], description=tool_details['description'], miner_id=miner_id)
-        response = await self.query_miner(self.metagraph, miner_id, syn)
-        # TODO: Abhishek sir will  provide the response
-        return response
+        bt.logging.info(f"Tool ID: {tool_id}, Miner ID: {miner_id}")
+        status, message = self.find_miner_and_check_resources(global_miner_details, miner_id, { "cup": 1, "gpu": None, "ram": 1024,})
+        bt.logging.info(f"Status: {status}, Message: {message}")
+        if(status):
+            tool_details = await vectorize_apis.get_vector_from_db(tool_id)
+            tool = self.get_tool_details_with_tool_id(tool_details, tool_id)
+            bt.logging.info(f"Tool Details: {tool}")
+            syn = RunToolRequest(tool_id=tool['toolId'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
+            response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
+            if response['success']:
+                alive_tool = self.check_tool_alive([tool], data['group_id'])[0]
+                status_of_tool = True if alive_tool['alive'] else False
+                if status_of_tool:
+                    print({"message": "Tool is running!"})
+                else:
+                    print({"message": "Tool is not running!"})
+        else: 
+            return None
     
     async def score_responses(
         self,
