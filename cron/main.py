@@ -1,6 +1,5 @@
 import schedule
 import time
-import requests
 from validators import groupchat_validator
 
 groupchat_vali = groupchat_validator.GroupChatValidator()
@@ -22,7 +21,7 @@ def miner_info():
 def start_pinging():
     print("Starting pinging")
     schedule.every(1).hour.do(tool_list_api)
-    # schedule.every(1).hour.do(miner_info)
+    schedule.every(1).hour.do(miner_info)
     while True:
         schedule.run_pending()
         time.sleep(1)
