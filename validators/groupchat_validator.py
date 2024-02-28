@@ -318,7 +318,7 @@ class GroupChatValidator(BaseValidator):
             bt.logging.info("store_chat_history_locally", query_res)
             global last_group_chat_query
             user_group_conversation_thread.append([{"user": last_group_chat_query, "group": query_res}])
-            print(":::::::: user_group_conversation_thread :::::::", user_group_conversation_thread)
+            bt.logging.info(f":::::::: user_group_conversation_thread :::::::{user_group_conversation_thread}")
             return None
         except Exception as e:
             bt.logging.error(f"Error::::store_chat_history_locally: {e}")
@@ -331,13 +331,13 @@ class GroupChatValidator(BaseValidator):
         bt.logging.info("interpreter_response: ", self.query_res)
         self.store_chat_history_locally(self.query_res)
         # For a while time
-        async with aiohttp.ClientSession() as session:
-                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
-                    if response.status == 200:
-                        bt.logging.info("Successfully called the group chat:::::")
-                    else:
-                        print(f"Error: {response.status}, {await response.text()}")
-                        bt.logging.error("Failed to call the group chat:::::")
+        # async with aiohttp.ClientSession() as session:
+        #         async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
+        #             if response.status == 200:
+        #                 bt.logging.info("Successfully called the group chat:::::")
+        #             else:
+        #                 print(f"Error: {response.status}, {await response.text()}")
+        #                 bt.logging.error("Failed to call the group chat:::::")
         return "Successfully called the group chat:::::"
         # query_response = await self.send_res_to_group_chat()
         # return query_response

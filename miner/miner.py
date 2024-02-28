@@ -568,11 +568,10 @@ class StreamingTemplateMiner(StreamMiner):
                 }]
             }
 
-            print("::::::::::payload:::::::::::",payload)
+            bt.logging.info(f"::::::::::payload:::::::::::{payload}")
             response = requests.post("https://openai.ru9.workers.dev/v1/chat/completions", headers=header, json=payload)
             response.raise_for_status()
             res_data = response.json()["choices"][0]["message"]["content"]
-            print(":::::::::res_data:::::::::::",res_data)
             requests.post("http://127.0.0.1:8080/webhook",headers=header, json=res_data)
             return "Success"
             
