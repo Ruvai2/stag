@@ -3,7 +3,7 @@ import random
 from base_validator import BaseValidator
 from app_config import config
 from utils import vectorize_apis,utils
-from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest, DeleteToolRequest
+from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest, DeleteToolRequest, IsMinerAlive
 from template.utils import call_openai,get_response_from_openai,fetch_ip
 import asyncio
 import torch
@@ -53,6 +53,19 @@ class GroupChatValidator(BaseValidator):
     async def query_miner(self, metagraph, miner_uid, syn):
         bt.logging.info(f"Querying miner {miner_uid} with {syn}")
         return await self.dendrite([metagraph.axons[miner_uid]], syn, deserialize=False, timeout=self.timeout)
+    
+    async def check_miner_alive(self, miner_id):
+        try:
+            print(":::::::::::::::::::check_tool_alive::::::::::::::::",miner_id)
+            syn = IsMinerAlive(miner_id = miner_id)
+            responses = (await self.query_miner(self.metagraph, miner_id, syn))[0]
+            bt.logging.info(f"Alive Tools: {responses}")
+            if responses.status is not None and responses.status['alive']:
+                return True
+            else :
+                return False
+        except Exception as e:
+            print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
     
     async def check_tool_alive(self, tool, miner_id):
         try:
@@ -252,7 +265,7 @@ class GroupChatValidator(BaseValidator):
     async def fetch_miner_details(self):
         global global_miner_details
         for miner_id in self.get_valid_miners_info():
-            syn = MinerInfo(uid=miner_id)
+            syn = MinerInfo(miner_id=miner_id)
             bt.logging.info(f"Received get_miner_tool_list request. {syn}, miner_id: {miner_id}")
             miner_details = (await self.query_miner(self.metagraph, miner_id, syn))[0]
             global_miner_details[miner_id] = miner_details
@@ -458,6 +471,8 @@ class GroupChatValidator(BaseValidator):
        
     # Define a function to find the miner and check for available resources
     def find_miner_and_check_resources(self, tool_benchmark):
+
+        bt.logging.info("::::::::::::: Checking miner resources : ::::::::::::")
         global global_miner_details
         
         compatible_miners = []
@@ -498,8 +513,10 @@ class GroupChatValidator(BaseValidator):
         
         
     async def run_tool(self, data):
+        bt.logging.info("::::::::::::: Run Tool Start : ::::::::::::")
         tool_id = (self.find_tool_id_by_agent_id(data['agent_id']))['tool_id']
         # get the tool benchmark details using tool_id
+        bt.logging.info("::::::::::::: Getting benchmark details : ::::::::::::")
         tool_benchmark_deatils = { "cup": 1, "gpu": None, "ram": 1024,}
         bt.logging.info(f"Tool ID: {tool_id}")
         miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
@@ -537,6 +554,16 @@ class GroupChatValidator(BaseValidator):
         except Exception as e:
             print("Error in delete_tool: ", e)
             return {"message": "Tool not deleted!"}
+        
+    async def request_for_miner_resources(self, data):
+        try:
+            syn = MinerInfo(miner_id=data['miner_id'])
+            bt.logging.info(f"Received get_miner_tool_list request. {syn}, miner_id: {data['miner_id']}")
+            miner_details = (await self.query_miner(self.metagraph, data['miner_id'], syn))[0]
+            bt.logging.info(f"Miner List: {miner_details}")
+            return miner_details.system_resource_data
+        except Exception as e:
+            bt.logging.error(f"Error in request_for_miner_resources: {e}")
     
     async def score_responses(
         self,

@@ -31,6 +31,18 @@ class IsToolAlive( bt.Synapse ):
         description="The status of the tool."
     )
     
+class IsMinerAlive( bt.Synapse ):
+    miner_id: int = pydantic.Field(  
+        ...,
+        title="Miner ID",
+        description="The ID of the miner to check."
+    )   
+    status: Optional[dict] = pydantic.Field(
+        None,
+        title="Status",
+        description="The status of the miner."
+    )
+    
 class GetToolList( bt.Synapse ):
     is_tool_list: bool = pydantic.Field(
         True,
@@ -77,16 +89,21 @@ class DeleteToolRequest( bt.Synapse ):
         description="The ID of the tool to delete."
     )
     system_resource_data: Optional[dict] = pydantic.Field(
-        None,
+        {},
         title="System Resource Data",
         description="The system resource data of the tool."
     )
     
 class MinerInfo( bt.Synapse ):
-    uid: str = pydantic.Field(
+    miner_id: str = pydantic.Field(
         ...,
         title="uid",
         description="Get Alive Miners status",
+    )
+    system_resource_data: Optional[dict] = pydantic.Field(
+        {},
+        title="System Resource Data",
+        description="The system resource data of the tool."
     )
     
 class InterpreterRequests( bt.Synapse ):

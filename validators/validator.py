@@ -266,6 +266,59 @@ async def handle_request_for_delete_tool(request: web.Request):
     except Exception as e:
         bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
+    
+async def handle_request_for_the_miner_resouces(request: web.Request):
+    """
+    Handle request for the miner agents. This method handles the incoming requests and returns the response from the forward function.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+       return web.json_response(await group_chat_vali.request_for_miner_resources(data))
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+    
+async def handle_check_tool_alive_status(request: web.Request):
+    """
+    Handle request for check alive status of the tool.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+        tool_alive_status = await group_chat_vali.check_tool_alive({"tool_id": data['tool_id']}, data['miner_id'])
+        if tool_alive_status:
+            return web.json_response({"message": "Tool is running!"})
+        else:
+            return web.json_response({"message": "Tool is not running!"})
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
+    
+async def handle_check_miner_alive_status(request: web.Request):
+    """ 
+    Handle request for check alive status of the tool.
+    """
+    try:
+        data = await request.json()
+    except ValueError:
+        return web.Response(status=400, text="Bad request format")
+    
+    try:
+        miner_alive_status = await group_chat_vali.check_miner_alive(data['miner_id'])
+        if miner_alive_status:
+            return web.json_response({"message": "Miner is running!"})
+        else:
+            return web.json_response({"message": "Miner is not running!"})
+    except Exception as e:
+        bt.logging.error(f'Encountered in {handle_request_for_the_miner_agents.__name__}:\n{traceback.format_exc()}')
+        return web.Response(status=500, text="Internal error")
 
 class ValidatorApplication(web.Application):
     def __init__(self, *a, **kw):
@@ -284,6 +337,9 @@ validator_app.add_routes([
     web.post('/request_run_tool', handle_request_run_tool),
     web.post('/request_delete_tool', handle_request_for_delete_tool),
     web.post('/query_to_resolve', forward_query_request),
+    web.post('/request_miner_resouces', handle_request_for_the_miner_resouces),
+    web.post('/check_tool_alive', handle_check_tool_alive_status),
+    web.post('/check_miner_alive_status', handle_check_miner_alive_status)
 ])
 
 def main(run_aio_app=True, test=False) -> None:

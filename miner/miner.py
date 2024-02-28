@@ -30,7 +30,7 @@ import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from anthropic_bedrock import AsyncAnthropicBedrock, HUMAN_PROMPT, AI_PROMPT, AnthropicBedrock
 
 import template
-from template.protocol import Embeddings, ImageResponse, IsAlive, StreamPrompting, Dummy, IsToolAlive, GetToolList, InterpreterRequests,DeleteToolRequest,RunToolRequest
+from template.protocol import Embeddings, ImageResponse, IsAlive, StreamPrompting, Dummy, IsToolAlive, GetToolList, InterpreterRequests,DeleteToolRequest,RunToolRequest, IsMinerAlive, MinerInfo
 from template.utils import get_version
 import sys
 from utils import tool_ports_mapping
@@ -133,6 +133,8 @@ class StreamMiner(ABC):
             forward_fn=self._is_alive,
             # blacklist_fn=self.blacklist_is_alive,
         ).attach(
+            forward_fn=self._is_miner_alive
+        ).attach(
             forward_fn=self._is_tool_alive,
         ).attach(
             forward_fn=self._get_tool_list,
@@ -152,6 +154,8 @@ class StreamMiner(ABC):
         ).attach(
             forward_fn=self._run_tool,
             # blacklist_fn=self.blacklist_embeddings,
+        ).attach(
+            forward_fn=self._send_miner_resource_details
         )
         bt.logging.info(f"Axon created: {self.axon}")
 
@@ -176,6 +180,12 @@ class StreamMiner(ABC):
     
     def _is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
         return self.is_tool_alive(synapse)
+    
+    def _is_miner_alive(self, synapse: IsMinerAlive) -> IsMinerAlive:
+        return self.is_miner_alive(synapse)
+    
+    def _send_miner_resource_details(self, synapse: MinerInfo) -> MinerInfo:
+        return self.send_miner_resource_details(synapse)
     
     def _get_tool_list(self, synapse: GetToolList) -> GetToolList:
         return self.get_tool_list(synapse)
@@ -273,6 +283,12 @@ class StreamMiner(ABC):
     def _is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
         return self.is_tool_alive(synapse)
     
+    def _is_miner_alive(self, synapse: IsMinerAlive) -> IsMinerAlive:
+        return self.is_miner_alive(synapse)
+    
+    def _send_miner_resource_details(self, synapse: MinerInfo) -> MinerInfo:
+        return self.send_miner_resource_details(synapse)
+    
     def _get_tool_list(self, synapse: GetToolList) -> GetToolList:
         return self.get_tool_list(synapse)
     
@@ -301,9 +317,20 @@ class StreamMiner(ABC):
     @abstractmethod
     def is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
         ...
+        
+    @abstractmethod
+    def is_miner_alive(self, synapse: IsMinerAlive) -> IsMinerAlive:
+        ...    
+        
+    @abstractmethod
+    def send_miner_resource_details(self, synapse: MinerInfo) -> MinerInfo:
+        ...
+        
     @abstractmethod
     def delete_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
         ...
+    
+    @abstractmethod
     def run_tools(self, synapse: RunToolRequest) -> RunToolRequest:
         ...
         
@@ -484,6 +511,45 @@ class StreamingTemplateMiner(StreamMiner):
             tool_status = request_handler.request_handler_get(URL)
             bt.logging.info(f"tool_status: {tool_status}")
             synapse.status = {"alive": False} if tool_status is None else tool_status
+            return synapse
+        except Exception as e: 
+            bt.logging.error(f"::::Error in get_tool_list::::", e)
+            
+    def send_miner_resource_details(self, synapse: MinerInfo) -> MinerInfo:
+        try:
+            bt.logging.info("In send_miner_resource_details", synapse)
+            synapse.system_resource_data = {
+                "miner_id": synapse.miner_id,
+                "resources_details" : {   
+                "ram_details": {
+                    "total_ram_mb": 16384.0,
+                    "available_ram_mb": 2780.812,
+                    "utilized_ram_percent": 83.0
+                },
+                "cpu_info": {
+                    "num_logical_cores": 8,
+                    "num_physical_cores": 8,
+                    "cpu_percent_each_core": [
+                        41.5,
+                        40.4,
+                        35.8,
+                        37.5,
+                        52.0,
+                        42.4,
+                        38.4,
+                        32.3
+                    ]
+                },
+                "gpu_info": []
+            }}
+            return synapse
+        except Exception as e:
+            bt.logging.error(f"::::Error in send_miner_resource_details::::", e)
+            
+    def is_miner_alive(self, synapse: IsMinerAlive) -> IsMinerAlive:
+        try:
+            bt.logging.info("miner answered to be active", synapse)
+            synapse.status = {"alive": True}
             return synapse
         except Exception as e: 
             bt.logging.error(f"::::Error in get_tool_list::::", e)
