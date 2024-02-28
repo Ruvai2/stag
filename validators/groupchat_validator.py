@@ -227,7 +227,7 @@ class GroupChatValidator(BaseValidator):
             # bt.logging.info(f"Completed tool association for agent_id in lo: {payload['agent_id']}")
 
             # Fetch the IP address of the validator
-            # fetch_validator_ip = fetch_ip()
+            fetch_validator_ip = fetch_ip()
             # bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
 
             # Return the validator IP and the list of tools to be used
