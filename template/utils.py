@@ -354,7 +354,7 @@ async def call_openai(messages, temperature, model, seed=1234, max_tokens=2048, 
 
 async def get_response_from_openai(messages, temperature, model, seed=1234, max_tokens=2048, top_p=1):
     try:
-        print(":::::INSIDE_THE_get_response_from_openai:::::::")
+        # print(":::::INSIDE_THE_get_response_from_openai:::::::")
         header = {"Content-Type": "application/json"}
         payload = {
             "model": "gpt-4",
