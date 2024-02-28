@@ -17,9 +17,10 @@ import json
 # miner_group_association = {}
 # global_miner_details = []
 global_agent_tool_association = []
+last_group_chat_query = None
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
 global_miner_details = {
-    16: {   
+    10: {   
         "ram_details": {
             "total_ram_mb": 16384.0,
             "available_ram_mb": 2780.812,
@@ -312,11 +313,23 @@ class GroupChatValidator(BaseValidator):
                         alive_tool_list.append(tool)
                 await self.save_miner_info(alive_tool_list, miner_id)
     
+    def store_chat_history_locally(self, query_res):
+        try:
+            bt.logging.info("store_chat_history_locally", query_res)
+            global last_group_chat_query
+            user_group_conversation_thread.append([{"user": last_group_chat_query, "group": query_res}])
+            print(":::::::: user_group_conversation_thread :::::::", user_group_conversation_thread)
+            return None
+        except Exception as e:
+            bt.logging.error(f"Error::::store_chat_history_locally: {e}")
+            return None
+
+
     async def interpreter_response(self, response):
         bt.logging.info("interpreter_response", response)
         self.query_res = response
         bt.logging.info("interpreter_response: ", self.query_res)
-
+        self.store_chat_history_locally(self.query_res)
         # For a while time
         async with aiohttp.ClientSession() as session:
                 async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
@@ -341,7 +354,8 @@ class GroupChatValidator(BaseValidator):
         """
         try:
             bt.logging.info(f"Received query request: {data}")
-            
+            global last_group_chat_query
+            last_group_chat_query = data['problem_statement']
             fetch_tool_detail = self.get_tool_association_by_id(data['agent_id'], global_agent_tool_association)
             bt.logging.info(f"Fetched tool details: {fetch_tool_detail}")
             fetch_tool_detail["miner_id"] = 10

@@ -216,7 +216,8 @@ async def handle_miner_response(request: web.Request):
         bt.logging.info(f"Received query request. {data}")
         
         try:
-            return web.json_response(await group_chat_vali.interpreter_response(data))
+            res = await group_chat_vali.interpreter_response(data)
+            return web.json_response({"message":"success"})
         except Exception as e:
             bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
             return web.Response(status=500, text="Internal error")
