@@ -332,7 +332,7 @@ class GroupChatValidator(BaseValidator):
             bt.logging.info("store_chat_history_locally", query_res)
             global last_group_chat_query
             user_group_conversation_thread.append({"user": last_group_chat_query, "group": query_res})
-            bt.logging.info(f":::::::: user_group_conversation_thread :::::::{user_group_conversation_thread}")
+            bt.logging.info(f":::::::: Stored_chat_history_in_local_dictionary :::::::{user_group_conversation_thread}")
             return None
         except Exception as e:
             bt.logging.error(f"Error::::store_chat_history_locally: {e}")
