@@ -515,46 +515,58 @@ class GroupChatValidator(BaseValidator):
         
         
     async def run_tool(self, data):
-        bt.logging.info("::::::::::::: Run Tool Start : ::::::::::::")
-        tool_id = (self.find_tool_id_by_agent_id(data['agent_id']))['tool_id']
-        # get the tool benchmark details using tool_id
-        bt.logging.info("::::::::::::: Getting benchmark details : ::::::::::::")
-        tool_benchmark_deatils = { "cup": 1, "gpu": None, "ram": 1024,}
-        bt.logging.info(f"Tool ID: {tool_id}")
-        miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
-        bt.logging.info(f"Status: {status}, Message: {message}, Miner ID: {miner_id}")
-        if status:
-            tool = (await vectorize_apis.get_tool_from_vector_db(collection_name="tools", tool_id=tool_id))['data']['payload']
-            bt.logging.info(f"Tool Details: {type(tool)} {tool}")
-            syn = RunToolRequest(tool_id=tool['tool_id'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
-            response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
-            if response.success:
-                print("::::::::::::: response.success: ::::::::::::", response)
-                print("::::::::::::: response.tool: ::::::::::::", response)
-                alive_tool = await self.check_tool_alive(tool, miner_id)
-                if alive_tool:
-                    self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
-                    return {"message": "Tool is running!"}
-                else:
-                    return {"message": "Tool is not running!"}
-        else: 
-            return None
+        try:
+            bt.logging.info("::::::::::::: Run Tool Start : ::::::::::::")
+            tool_id = (self.find_tool_id_by_agent_id(data['agent_id']))['tool_id']
+            # get the tool benchmark details using tool_id
+            bt.logging.info("::::::::::::: Getting benchmark details : ::::::::::::")
+            tool_benchmark_deatils = { "cup": 1, "gpu": None, "ram": 1024,}
+            bt.logging.info(f"Tool ID: {tool_id}")
+            miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
+            bt.logging.info(f"Status: {status}, Message: {message}, Miner ID: {miner_id}")
+            if status:
+                tool = (await vectorize_apis.get_tool_from_vector_db(collection_name="tools", tool_id=tool_id))['data']['payload']
+                bt.logging.info(f"Tool Details: {type(tool)} {tool}")
+                syn = RunToolRequest(tool_id=tool['tool_id'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
+                bt.logging.info("::::::::::::: Sending syn to miner to run command : ::::::::::::")
+                response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
+                if response.success:
+                    print("::::::::::::: response.success: ::::::::::::", response)
+                    print("::::::::::::: response.tool: ::::::::::::", response)
+                    alive_tool = await self.check_tool_alive(tool, miner_id)
+                    if alive_tool:
+                        self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
+                        return {"message": "Tool is running!"}
+                    else:
+                        return {"message": "Tool is not running!"}
+            else: 
+                return None
+        except Exception as e:
+            print("Error in run_tool: ", e)
         
     async def set_weights_and_give_score(self):
         return True
         
-    async def delete_tool(self, data):
+    async def stop_tool(self, data):
         try:
+            bt.logging.info("::::::::::::: Stop Tool Start : ::::::::::::")
             global global_miner_details
-            bt.logging.info(f":::::::::::::data::::::::: {data}")
             local_data = self.find_tool_id_by_agent_id(data['agent_id'])
             syn = DeleteToolRequest(tool_id=local_data['tool_id'])
+            
+            bt.logging.info("Sending the request to miner to stop tool")
             miner_response = (await self.query_miner(self.metagraph, local_data['miner_id'], syn))[0]
+            
+            bt.logging.info("Store the miner resources deatils locally after stop the tool")
             global_miner_details[local_data['miner_id']] = miner_response.system_resource_data
+            
+            bt.logging.info("Set weights for tool")
             await self.set_weights_and_give_score()
+            
+            bt.logging.info("Sending the information return back to the orchestrator")
             return {"message": "Tool deleted!", "conversation": user_group_conversation_thread}
         except Exception as e:
-            print("Error in delete_tool: ", e)
+            print("Error in stop_tool: ", e)
             return {"message": "Tool not deleted!"}
         
     async def request_for_miner_resources(self, data):

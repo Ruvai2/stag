@@ -149,7 +149,7 @@ class StreamMiner(ABC):
             forward_fn=self._embeddings,
             # blacklist_fn=self.blacklist_embeddings,
         ).attach(
-            forward_fn=self._delete_tool,
+            forward_fn=self._stop_tool,
             # blacklist_fn=self.blacklist_embeddings,
         ).attach(
             forward_fn=self._run_tool,
@@ -192,8 +192,8 @@ class StreamMiner(ABC):
         
     def _handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         return self.handle_interpreter_requests(synapse)
-    def _delete_tool(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
-        return self.delete_tools(synapse)
+    def _stop_tool(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
+        return self.stop_tools(synapse)
     def _run_tool(self, synapse: RunToolRequest) -> RunToolRequest:
         return self.run_tools(synapse)
 
@@ -327,7 +327,7 @@ class StreamMiner(ABC):
         ...
         
     @abstractmethod
-    def delete_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
+    def stop_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
         ...
     
     @abstractmethod
@@ -554,7 +554,7 @@ class StreamingTemplateMiner(StreamMiner):
         except Exception as e: 
             bt.logging.error(f"::::Error in get_tool_list::::", e)
 
-    def delete_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
+    def stop_tools(self, synapse: DeleteToolRequest) -> DeleteToolRequest:
         """
         Delete tools and return the updated DeleteToolRequest.
 
@@ -591,7 +591,7 @@ class StreamingTemplateMiner(StreamMiner):
             }
             return synapse
         except Exception as e:
-            bt.logging.error(f"::::Error in delete_tools::::", e)
+            bt.logging.error(f"::::Error in stop_tools::::", e)
 
     def run_tools(self, synapse: RunToolRequest) -> RunToolRequest:
         """

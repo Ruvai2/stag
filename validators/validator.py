@@ -252,7 +252,7 @@ async def handle_request_run_tool(request: web.Request):
         bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
 
-async def handle_request_for_delete_tool(request: web.Request):
+async def handle_request_for_stop_tool(request: web.Request):
     """
     Get query request handler. This method handles the incoming requests and returns the response from the forward function.
     """
@@ -262,7 +262,7 @@ async def handle_request_for_delete_tool(request: web.Request):
         return web.Response(status=400, text="Bad request format")
     
     try:
-        return web.json_response(await group_chat_vali.delete_tool(data))
+        return web.json_response(await group_chat_vali.stop_tool(data))
     except Exception as e:
         bt.logging.error(f'Encountered in {handle_miner_response.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")
@@ -335,7 +335,7 @@ validator_app.add_routes([
     web.post('/remove_miner', handle_remove_agent_request),
     web.post('/request_tools_list', handle_request_for_the_tools_list),
     web.post('/request_run_tool', handle_request_run_tool),
-    web.post('/request_delete_tool', handle_request_for_delete_tool),
+    web.post('/request_stop_tool', handle_request_for_stop_tool),
     web.post('/query_to_resolve', forward_query_request),
     web.post('/request_miner_resouces', handle_request_for_the_miner_resouces),
     web.post('/check_tool_alive', handle_check_tool_alive_status),
