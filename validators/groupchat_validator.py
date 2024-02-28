@@ -19,6 +19,7 @@ import json
 global_agent_tool_association = []
 last_group_chat_query = None
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
+tool_conversation_score = [] # [{"tool_id": 1001, "weight": 0.5}]
 global_miner_details = {
     10: {   
         "ram_details": {
@@ -271,6 +272,22 @@ class GroupChatValidator(BaseValidator):
             miner_details = (await self.query_miner(self.metagraph, miner_id, syn))[0]
             global_miner_details[miner_id] = miner_details
             bt.logging.info(f"Miner List: {miner_details}")
+        return 
+
+    async def update_tool_weights_in_vector_db(self):
+        bt.logging.info("::::: Update Tools weight in vector DB Start :::::::::")
+        global tool_conversation_score
+        for tool_info in tool_conversation_score:
+            weight_payload = {
+                "collection_name": "tools",
+                "id": tool_info['tool_id'],
+                "score": tool_info['weight']
+            }
+            await vectorize_apis.update_data_in_vector_db(weight_payload)
+        else:
+            bt.logging.info("::::: Update Tools weight in vector DB END :::::::::", weight_payload)
+            tool_conversation_score = {}
+        
         return 
 
     async def save_miner_info(self, alive_tool_list, miner_id):

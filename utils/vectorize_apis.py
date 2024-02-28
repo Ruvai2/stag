@@ -21,6 +21,18 @@ async def api_request_handler(**kwargs):
                         return await response.json()
                     else:
                         print(f"Error: {response.status}, {await response.text()}")
+            elif kwargs['method'] == "PUT":
+                async with session.put(kwargs['url'], json=kwargs['data']) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
+            elif kwargs['method'] == "PATCH":
+                async with session.patch(kwargs['url'], json=kwargs['data']) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error: {response.status}, {await response.text()}")
             elif kwargs['method'] == "DELETE":
                 async with session.delete(kwargs['url']) as response:
                     if response.status == 200:
@@ -70,3 +82,12 @@ async def delete_vector_from_db(ids):
         return response
     except Exception as e:
         print(f"Error: {e}")
+        
+async def update_data_in_vector_db(payload):
+    try:
+        vector_insert_url = f"{qdrant_api_base_url}"
+        response = await api_request_handler(method="PATCH", url=vector_insert_url, data=payload)
+        return response
+    except Exception as e:
+        print(f"Error: {e}")
+

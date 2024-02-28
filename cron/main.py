@@ -17,11 +17,19 @@ def miner_info():
         groupchat_vali.fetch_miner_details()
     except Exception as e:
         print(f"Error: {e}")
+
+def update_tool_weights():
+    try:
+        print(":::::: Get miner info :::::::")
+        groupchat_vali.update_tool_weights_in_vector_db()
+    except Exception as e:
+        print(f"Error: {e}")
         
 def start_pinging():
     print("Starting pinging")
     schedule.every(1).hour.do(tool_list_api)
     schedule.every(1).hour.do(miner_info)
+    schedule.every(1).hour.do(update_tool_weights)
     while True:
         schedule.run_pending()
         time.sleep(1)
