@@ -502,6 +502,7 @@ class StreamingTemplateMiner(StreamMiner):
             
     def is_tool_alive(self, synapse: IsToolAlive) -> IsToolAlive:
         try:
+            bt.logging.info(":::::::::INSIDE_TOOL_ALIVE_CHECK::::::::::::")
             bt.logging.info("tool answered to be active", synapse)
             portId = str(tool_ports_mapping.get_tool_port(synapse.tool_id))
             if not portId:
@@ -517,6 +518,7 @@ class StreamingTemplateMiner(StreamMiner):
             
     def send_miner_resource_details(self, synapse: MinerInfo) -> MinerInfo:
         try:
+            bt.logging.info(":::::::::::INSIDE_MINER_RESOURCE:::::::::::")
             bt.logging.info("In send_miner_resource_details", synapse)
             synapse.system_resource_data = {
                 "miner_id": synapse.miner_id,
@@ -548,6 +550,7 @@ class StreamingTemplateMiner(StreamMiner):
             
     def is_miner_alive(self, synapse: IsMinerAlive) -> IsMinerAlive:
         try:
+            bt.logging.info(":::::::::::INSIDE_MINER_ALIVE_CHECK:::::::::::")
             bt.logging.info("miner answered to be active", synapse)
             synapse.status = {"alive": True}
             return synapse
@@ -566,6 +569,7 @@ class StreamingTemplateMiner(StreamMiner):
             DeleteToolRequest: The updated tool after deletion.
         """
         try:
+            bt.logging.info(":::::::::::INSIDE_MINER_STOP_TOOL:::::::::::")
             bt.logging.info("Tool has been deleted!", synapse)
             synapse.system_resource_data = {   
                 "ram_details": {
@@ -604,6 +608,7 @@ class StreamingTemplateMiner(StreamMiner):
             RunToolRequest: The updated RunToolRequest object with the success status.
         """
         try:
+            bt.logging.info(":::::::::::INSIDE_MINER_RUN_TOOL:::::::::::")
             bt.logging.info("Tool is now running!", synapse)
             synapse.success = True
             return synapse
@@ -612,6 +617,7 @@ class StreamingTemplateMiner(StreamMiner):
             
     def get_tool_list(self, synapse: GetToolList) -> GetToolList:
         try:
+            bt.logging.info(":::::::::::INSIDE_MINER_TO_FETCH_TOOLS_LIST:::::::::::")
             bt.logging.info("tool list requested", synapse)
             dict_output = {}
             dict_output['key'] = tool_lists
@@ -645,6 +651,7 @@ class StreamingTemplateMiner(StreamMiner):
             bt.logging.error(f"::::Error in handle_interpreter_requests::::", e)
     def handle_interpreter_requests(self, synapse: InterpreterRequests) -> InterpreterRequests:
         try:
+            bt.logging.info(":::::::::::INSIDE_MINER_TO_PROCESS_ON_ACTUAL_QUERY:::::::::::")
             bt.logging.info(f"received interpreter request: {synapse}")
             get_openai_res = self.generate_response_from_openai(synapse.query)
             synapse.output = {'key': 'INTERPRETER_PROCESSING'}

@@ -564,7 +564,7 @@ class GroupChatValidator(BaseValidator):
             await self.set_weights_and_give_score()
             
             bt.logging.info("Sending the information return back to the orchestrator")
-            return {"message": "Tool deleted!", "conversation": user_group_conversation_thread}
+            return {"message": "Tool Stoped!", "conversation": user_group_conversation_thread}
         except Exception as e:
             print("Error in stop_tool: ", e)
             return {"message": "Tool not deleted!"}
