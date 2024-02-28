@@ -99,10 +99,11 @@ class GroupChatValidator(BaseValidator):
         return matches[0]
 
     async def get_res_from_open_ai(self, query, miner_tools_info):
-        bt.logging.info(":::::::::::get_res_from_open_ai::::::::::::")
+        # bt.logging.info(":::::::::::get_res_from_open_ai::::::::::::")
+        bt.logging.info("::::::::::::Finalizing Tools: The Basis of Problem Statement::::::::")
 
         prompt_lines = [
-            'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data nothing else.\n Tools available:'
+            'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data with only one item nothing else.\n Tools available:'
         ]
         prompt_lines[0] = prompt_lines[0].format(query)
         for tool in miner_tools_info:
@@ -111,7 +112,7 @@ class GroupChatValidator(BaseValidator):
             prompt_lines.append(tool_info)
         prompt = '\n'.join(prompt_lines)
         openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
-        bt.logging.info(f"Recommended Tool IDs: {openai_res}")
+        bt.logging.info(f"::::Recommended Tool IDs:::: {openai_res}")
         return openai_res
 
         
@@ -163,7 +164,7 @@ class GroupChatValidator(BaseValidator):
     async def create_global_agent_tool_association(self, data, agent_id):
         global global_agent_tool_association
         generate_res_for_orchestrator = []
-        bt.logging.info(":::::::::::::INSIDE_THE_create_global_agent_tool_association:::::::::")
+        bt.logging.info(":::::::::::::Store tools details in local dictionary:::::::::")
         bt.logging.info(f":::::::::::::data::::::::: {data}")
         payload_data = json.loads(data)
         for item in payload_data:
@@ -193,7 +194,7 @@ class GroupChatValidator(BaseValidator):
         """
         try:
             # Log the start of the method and the payload received
-            bt.logging.info(f"Starting process_tool_selection_request with payload: {payload}")
+            bt.logging.info(f"::::::::::Starting process_tool_selection_request with payload:::::: {payload}")
 
             tools_to_use = []
 
@@ -202,7 +203,7 @@ class GroupChatValidator(BaseValidator):
                 "account_id": config.dassi_vectorize_account_id,
                 "chunks": [{"id": "1", "metadata": {"context": prompt}}],
             }
-            bt.logging.info(f"Payload for text embedding: {payload_for_text_embedding}")
+            # bt.logging.info(f":::::::::Payload for text embedding::::::::::: {payload_for_text_embedding}")
 
             # Convert the problem statement text to a vector
             embedded_text = await vectorize_apis.convert_text_to_vector(payload_for_text_embedding)
@@ -212,7 +213,7 @@ class GroupChatValidator(BaseValidator):
             if embedded_text['vectorizedChunks']:
                 chunk = embedded_text['vectorizedChunks'][0]
                 miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
-                bt.logging.info(f"Retrieved miner tools info based on vectorized chunk.")
+                bt.logging.info(f"::::::::Retrieved miner tools info based on vectorized chunk.::::::::::::")
 
             # Add a default description to each tool for demonstration
             for tool in miner_tools_info:
@@ -223,14 +224,14 @@ class GroupChatValidator(BaseValidator):
 
             # Create global agent tool association based on the recommendations
             orchestrator_res = await self.create_global_agent_tool_association(res, payload['agent_id'])
-            bt.logging.info(f"Completed tool association for agent_id: {payload['agent_id']}")
+            # bt.logging.info(f"Completed tool association for agent_id in lo: {payload['agent_id']}")
 
             # Fetch the IP address of the validator
-            fetch_validator_ip = fetch_ip()
-            bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
+            # fetch_validator_ip = fetch_ip()
+            # bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
 
             # Return the validator IP and the list of tools to be used
-            return {"ip": fetch_validator_ip, "tool_list": orchestrator_res}
+            return {"tool_list": orchestrator_res}
         except Exception as e:
             bt.logging.error(f"Error in process_tool_selection_request: {e}")
             return {"error": f"An error occurred: {e}"}
@@ -330,7 +331,7 @@ class GroupChatValidator(BaseValidator):
         try:
             bt.logging.info("store_chat_history_locally", query_res)
             global last_group_chat_query
-            user_group_conversation_thread.append([{"user": last_group_chat_query, "group": query_res}])
+            user_group_conversation_thread.append({"user": last_group_chat_query, "group": query_res})
             bt.logging.info(f":::::::: user_group_conversation_thread :::::::{user_group_conversation_thread}")
             return None
         except Exception as e:
@@ -366,11 +367,12 @@ class GroupChatValidator(BaseValidator):
         - The response from the forwarded request to the specified miner.
         """
         try:
+            bt.logging.info("::::::::::Processing actual query:::::::::::")
             bt.logging.info(f"Received query request: {data}")
             global last_group_chat_query
             last_group_chat_query = data['problem_statement']
             fetch_tool_detail = self.get_tool_association_by_id(data['agent_id'], global_agent_tool_association)
-            bt.logging.info(f"Fetched tool details: {fetch_tool_detail}")
+            bt.logging.info(f":::::::::Fetched tool details from local dictionary::::: {fetch_tool_detail}")
             fetch_tool_detail["miner_id"] = 10
             if 'miner_id' not in fetch_tool_detail or 'tool_id' not in fetch_tool_detail:
                 raise ValueError("Missing 'miner_id' or 'tool_id' in fetched tool details.")
@@ -412,11 +414,11 @@ class GroupChatValidator(BaseValidator):
             self (:obj:`bittensor.neuron.Neuron`): The neuron object which contains all the necessary state for the validator.
 
         """
-        bt.logging.info(f"::::::::::::::SELF.QUERY:::::::::::::::::: {syn}")
+        bt.logging.info(f"::::::::::::::Synapse_for_actual_query_to_miner:::::::::::::::::: {syn}")
         try:
             responses = await self.query_miner(self.metagraph, miner_id, syn)
             res_string  = responses[0]
-            bt.logging.info(":::::::::::::::res_string:::::::::::::::::", res_string)
+            bt.logging.info(":::::::::::::::miner_response_to validator:::::::::::::::::", res_string)
             # if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
             #     self.query_res = res_string.output
             #     await self.send_res_to_group_chat()

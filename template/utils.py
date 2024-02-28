@@ -366,8 +366,6 @@ async def get_response_from_openai(messages, temperature, model, seed=1234, max_
                         'content': messages
             }]
         }
-
-        print("::::::::::payload:::::::::::",payload)
         response = requests.post(
             "https://openai.ru9.workers.dev/v1/chat/completions", headers=header, json=payload)
         response.raise_for_status()
