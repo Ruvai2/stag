@@ -274,18 +274,18 @@ class GroupChatValidator(BaseValidator):
             bt.logging.info(f"Miner List: {miner_details}")
         return 
 
-    async def update_tool_weights_in_vector_db(self):
-        bt.logging.info("::::: Update Tools weight in vector DB Start :::::::::")
+    async def update_tool_score_in_vector_db(self):
+        bt.logging.info("::::: Update Tools score in vector DB Start :::::::::")
         global tool_conversation_score
         for tool_info in tool_conversation_score:
-            weight_payload = {
+            score_payload = {
                 "collection_name": "tools",
                 "id": tool_info['tool_id'],
-                "score": tool_info['weight']
+                "score": tool_info['score']
             }
-            await vectorize_apis.update_data_in_vector_db(weight_payload)
+            await vectorize_apis.update_data_in_vector_db(score_payload)
         else:
-            bt.logging.info("::::: Update Tools weight in vector DB END :::::::::", weight_payload)
+            bt.logging.info("::::: Update Tools score in vector DB END :::::::::", score_payload)
             tool_conversation_score = {}
         
         return 
@@ -361,6 +361,9 @@ class GroupChatValidator(BaseValidator):
         self.query_res = response
         bt.logging.info("interpreter_response: ", self.query_res)
         self.store_chat_history_locally(self.query_res)
+        affirmation = self.check_affirmation_of_query_response(self.query_res)
+        if affirmation:
+            self.calculate_and_set_score_for_tools_response("1006", self.query_res)
         # For a while time
         # async with aiohttp.ClientSession() as session:
         #         async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
@@ -372,6 +375,32 @@ class GroupChatValidator(BaseValidator):
         return "Successfully called the group chat:::::"
         # query_response = await self.send_res_to_group_chat()
         # return query_response
+        
+    # check affirmation of tool response
+    async def check_affirmation_of_query_response(self, response):
+        try:
+            global tool_conversation_score
+            print(":::::::::::::::::::Checming affirmation of tool START::::::::::::::::","response: ", response)
+            return random.choices([True, False])
+        except Exception as e:
+            print(f"An unexpected error occurred:::::check_affirmation_of_tool::::: {e}")
+    
+    async def calculate_score(self):
+        return 0.04    
+    
+    # Set tool score after the tools response
+    async def calculate_and_set_score_for_tools_response(self, tool_id, query):
+        try:
+            global tool_conversation_score
+            
+            score = self.calculate_score(query)
+            print(":::::::::::::::::::Setting score for tools response::::::::::::::::","tool_id: ", tool_id, "score: ", score)
+            tool_conversation_score.append({
+                "tool_id": tool_id,
+                "score": score
+            })
+        except Exception as e:
+            print(f"An unexpected error occurred:::::set_score_for_tools_response::::: {e}")
 
     async def send_query_to_miner(self, data):
         """
