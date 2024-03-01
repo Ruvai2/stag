@@ -379,7 +379,7 @@ class GroupChatValidator(BaseValidator):
     # check affirmation of tool response
     async def check_affirmation_of_query_response(self, response):
         try:
-            bt.logging.info(f":::::::::::::::::::Checking affirmation of tool START:::::::::::::::: {response}")
+            bt.logging.info(f":::::::::::::::::::Checking affirmation of tool START::::::::::::::::")
             global tool_conversation_score
             return random.choices([True, False])
         except Exception as e:
@@ -399,6 +399,7 @@ class GroupChatValidator(BaseValidator):
                 "tool_id": tool_id,
                 "score": score
             })
+            bt.logging.info(f"::::::::::::tool_conversation_score::::::::: {tool_conversation_score}")
         except Exception as e:
             bt.logging.info(f"An unexpected error occurred:::::set_score_for_tools_response::::: {e}")
 
