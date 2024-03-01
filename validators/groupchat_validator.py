@@ -394,7 +394,8 @@ class GroupChatValidator(BaseValidator):
         try:
             global tool_conversation_score
             bt.logging.info(f":::::::::::::::::::Setting score for tools response::::::::::::::::tool_id:, {tool_id}")
-            score = self.calculate_score(query)
+            score = await self.calculate_score(query)
+            bt.logging.info(f"::::::::::::score::::::::: {score}")
             tool_conversation_score.append({
                 "tool_id": tool_id,
                 "score": score
