@@ -359,7 +359,7 @@ class GroupChatValidator(BaseValidator):
     async def interpreter_response(self, response):
         bt.logging.info(f"interpreter_response: {response}")
         self.query_res = response
-        bt.logging.info(f"interpreter_response: {self.query_res}")
+        # bt.logging.info("interpreter_response: ", self.query_res)
         self.store_chat_history_locally(self.query_res)
         affirmation = await self.check_affirmation_of_query_response(self.query_res)
         if affirmation:
