@@ -285,7 +285,7 @@ class GroupChatValidator(BaseValidator):
             }
             await vectorize_apis.update_data_in_vector_db(score_payload)
         else:
-            bt.logging.info("::::: Update Tools score in vector DB END :::::::::", score_payload)
+            bt.logging.info(f"::::: Update Tools score in vector DB END ::::::::: {score_payload}")
             tool_conversation_score = {}
         
         return 
@@ -357,9 +357,9 @@ class GroupChatValidator(BaseValidator):
 
 
     async def interpreter_response(self, response):
-        bt.logging.info("interpreter_response", response)
+        bt.logging.info(f"interpreter_response: {response}")
         self.query_res = response
-        bt.logging.info("interpreter_response: ", self.query_res)
+        bt.logging.info(f"interpreter_response: {self.query_res}")
         self.store_chat_history_locally(self.query_res)
         affirmation = await self.check_affirmation_of_query_response(self.query_res)
         if affirmation:
@@ -379,20 +379,21 @@ class GroupChatValidator(BaseValidator):
     # check affirmation of tool response
     async def check_affirmation_of_query_response(self, response):
         try:
-            bt.logging.info(":::::::::::::::::::Checming affirmation of tool START::::::::::::::::","response: ", response)
+            bt.logging.info(f":::::::::::::::::::Checming affirmation of tool START:::::::::::::::: {response}")
             global tool_conversation_score
             return random.choices([True, False])
         except Exception as e:
             bt.logging.info(f"An unexpected error occurred:::::check_affirmation_of_tool::::: {e}")
     
     async def calculate_score(self):
+        bt.logging.info(":::::::::Calculating the score::::::::::::::::")
         return 0.04    
     
     # Set tool score after the tools response
     async def calculate_and_set_score_for_tools_response(self, tool_id, query):
         try:
             global tool_conversation_score
-            bt.logging.info(":::::::::::::::::::Setting score for tools response::::::::::::::::","tool_id: ", tool_id, "score: ", score)
+            bt.logging.info(f":::::::::::::::::::Setting score for tools response::::::::::::::::tool_id:, {tool_id}")
             score = self.calculate_score(query)
             tool_conversation_score.append({
                 "tool_id": tool_id,
