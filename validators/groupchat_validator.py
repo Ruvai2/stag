@@ -13,6 +13,7 @@ import aiohttp
 import asyncio
 from utils import utils
 import json
+from validators.vector_api.vector import Vector
 
 # miner_group_association = {}
 # global_miner_details = []
@@ -213,7 +214,8 @@ class GroupChatValidator(BaseValidator):
             # Check if the embedding process returned vectorized chunks
             if embedded_text['vectorizedChunks']:
                 chunk = embedded_text['vectorizedChunks'][0]
-                miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
+                miner_tools_info = Vector.search_vector_point('tools', chunk, 3, {})
+                # miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
                 bt.logging.info(f"::::::::Retrieved miner tools info based on vectorized chunk.::::::::::::")
 
             # Add a default description to each tool for demonstration

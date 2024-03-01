@@ -1,0 +1,6 @@
+aiohttp==3.8.1
+qdrant-client==1.7.3
+sentence_transformers==2.4.0
+fastapi==0.110.0
+uvicorn==0.27.1
+dotenv
