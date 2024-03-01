@@ -1,5 +1,5 @@
 import aiohttp
-
+from validators.vector_api.vector import Vector
 qdrant_api_base_url = "http://192.168.0.171:3000/vector"
 
 async def api_request_handler(**kwargs):
@@ -68,9 +68,10 @@ async def get_vector_from_db(query_vector):
         
 async def get_tool_from_vector_db(collection_name, tool_id):
     try:
-        vector_get_url =  f"{qdrant_api_base_url}/{collection_name}/{tool_id}"
-        response = await api_request_handler(method="GET", url=vector_get_url)
-        return response
+        return Vector.get_point_details(collection_name, tool_id)
+        # vector_get_url =  f"{qdrant_api_base_url}/{collection_name}/{tool_id}"
+        # response = await api_request_handler(method="GET", url=vector_get_url)
+        # return response
     except Exception as e:
         print(f"Error: {e}")
         
@@ -85,9 +86,10 @@ async def delete_vector_from_db(ids):
         
 async def update_data_in_vector_db(payload):
     try:
-        vector_insert_url = f"{qdrant_api_base_url}"
-        response = await api_request_handler(method="PATCH", url=vector_insert_url, data=payload)
-        return response
+        return Vector.update_vector_point(payload["collection_name"], payload["id"], payload["score"])
+        # vector_insert_url = f"{qdrant_api_base_url}"
+        # response = await api_request_handler(method="PATCH", url=vector_insert_url, data=payload)
+        # return response
     except Exception as e:
         print(f"Error: {e}")
 
