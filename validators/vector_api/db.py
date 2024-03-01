@@ -3,6 +3,7 @@ from qdrant_client.http import models
 from qdrant_client.http.models import PointStruct, Filter, PointIdsList
 from qdrant_client.http.api.points_api import *
 import os
+from config.config import *
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -15,11 +16,7 @@ def is_iterable(obj):
 
 class QdrantClientWrapper:
     def __init__(self):
-        host = os.getenv("DB_HOST")
-        port = os.getenv("DB_PORT")
-        print('host',host)
-        print('port',port)
-        self.client = QdrantClient(host = host, port = port)
+        self.client = QdrantClient(host = DB_HOST, port = DB_PORT)
 
     def create_collection(self, name, dimension):
         try:

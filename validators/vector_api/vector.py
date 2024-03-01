@@ -71,20 +71,20 @@ class Vector:
             return None
 
     @staticmethod
-    def search_vector_point(collection_name, query_vector, top_results, filters):
+    def search_vector_point(collection_name, query_vector, limit = 10, filters = {}):
         """_summary_
 
         Args:
             collection_name (str): _description_
             query_vector (list ): array of vector
-            top_results (int): number of results by default is 3
+            limit (int): number of results by default is 3
             filters (dict): filters if any 
 
         Returns:
             _type_: _description_
         """
         try:
-            return db_client.search_data(collection_name, query_vector, top_results = 3, filters = {})
+            return db_client.search_data(collection_name, query_vector, limit, filters)
         except Exception as e:
             print(f"An error occurred while searching vector data: {e}")
             return None

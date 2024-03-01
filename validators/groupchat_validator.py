@@ -13,7 +13,8 @@ import aiohttp
 import asyncio
 from utils import utils
 import json
-from validators.vector_api.vector import Vector
+from vector_api.vector import Vector
+from config.config import *
 
 # miner_group_association = {}
 # global_miner_details = []
@@ -102,6 +103,7 @@ class GroupChatValidator(BaseValidator):
 
     async def get_res_from_open_ai(self, query, miner_tools_info):
         # bt.logging.info(":::::::::::get_res_from_open_ai::::::::::::")
+        return miner_tools_info[0]
         bt.logging.info("::::::::::::Finalizing Tools: The Basis of Problem Statement::::::::")
 
         prompt_lines = [
@@ -166,16 +168,14 @@ class GroupChatValidator(BaseValidator):
     async def create_global_agent_tool_association(self, data, agent_id):
         global global_agent_tool_association
         generate_res_for_orchestrator = []
-        bt.logging.info(":::::::::::::Store tools details in local dictionary:::::::::")
-        bt.logging.info(f":::::::::::::data::::::::: {data}")
-        payload_data = json.loads(data)
+        payload_data = data
         for item in payload_data:
             if not isinstance(item, dict):
                 raise TypeError(f"Expected a dict, got {type(item)}")
             global_agent_tool_association.append({
                 "agent_id": agent_id,
                 # "tool_id": item['tool_id'],
-                "tool_id": "1001",
+                "tool_id": 1001,
                 "description": item['description'],
                 "run_command":"DOCKER_CMD_TO_START",
                 "docker_file":"config/docker-compose.yaml",
@@ -213,20 +213,19 @@ class GroupChatValidator(BaseValidator):
 
             # Check if the embedding process returned vectorized chunks
             if embedded_text['vectorizedChunks']:
-                chunk = embedded_text['vectorizedChunks'][0]
-                miner_tools_info = Vector.search_vector_point('tools', chunk, 3, {})
-                # miner_tools_info = (await vectorize_apis.get_vector_from_db(chunk['vector']))['matches']['matches']
-                bt.logging.info(f"::::::::Retrieved miner tools info based on vectorized chunk.::::::::::::")
+                chunk = embedded_text['vectorizedChunks'][0]['vector']
+                miner_tools_info = Vector.search_vector_point(DB_COLLECTION, chunk)
+                bt.logging.info(f"::::::::Retrieved miner tools info based on vectorized chunk.::::::::::::{miner_tools_info}")
 
             # Add a default description to each tool for demonstration
             for tool in miner_tools_info:
                 tool['description'] = "I'm a python developer and I can easily write a code in python whatever you gave to me"
 
             # Retrieve recommendations from OpenAI based on the problem statement and tools info
-            res = await self.get_res_from_open_ai(payload['problem_statement'], miner_tools_info)
+            # res = await self.get_res_from_open_ai(payload['problem_statement'], miner_tools_info)
 
             # Create global agent tool association based on the recommendations
-            orchestrator_res = await self.create_global_agent_tool_association(res, payload['agent_id'])
+            orchestrator_res = await self.create_global_agent_tool_association(miner_tools_info, payload['agent_id'])
             # bt.logging.info(f"Completed tool association for agent_id in lo: {payload['agent_id']}")
 
             # Fetch the IP address of the validator
@@ -281,7 +280,7 @@ class GroupChatValidator(BaseValidator):
         global tool_conversation_score
         for tool_info in tool_conversation_score:
             score_payload = {
-                "collection_name": "tools",
+                "collection_name": DB_COLLECTION,
                 "id": tool_info['tool_id'],
                 "score": tool_info['score']
             }
@@ -575,7 +574,7 @@ class GroupChatValidator(BaseValidator):
             miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
             bt.logging.info(f"Status: {status}, Message: {message}, Miner ID: {miner_id}")
             if status:
-                tool = (await vectorize_apis.get_tool_from_vector_db(collection_name="tools", tool_id=tool_id))['data']['payload']
+                tool = (await vectorize_apis.get_tool_from_vector_db(collection_name=DB_COLLECTION, tool_id=tool_id))['payload']
                 bt.logging.info(f"Tool Details: {type(tool)} {tool}")
                 syn = RunToolRequest(tool_id=tool['tool_id'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
                 bt.logging.info("::::::::::::: Sending syn to miner to run command : ::::::::::::")

@@ -1,4 +1,5 @@
 import aiohttp
+from validators.vector_api.vector import Vector
 
 qdrant_api_base_url = "http://192.168.0.129:3000/vector"
 
@@ -68,7 +69,8 @@ async def get_vector_from_db(query_vector):
         
 async def get_tool_from_vector_db(collection_name, tool_id):
     try:
-        return Vector.get_point_details(collection_name, tool_id)
+        res =  Vector.get_point_details(collection_name, tool_id)
+        return res
         # vector_get_url =  f"{qdrant_api_base_url}/{collection_name}/{tool_id}"
         # response = await api_request_handler(method="GET", url=vector_get_url)
         # return response
