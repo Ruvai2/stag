@@ -570,7 +570,7 @@ class StreamingTemplateMiner(StreamMiner):
         """
         try:
             bt.logging.info(":::::::::::INSIDE_MINER_STOP_TOOL:::::::::::")
-            bt.logging.info("Tool has been deleted!", synapse)
+            bt.logging.info("Tool has been Stoped!", synapse)
             synapse.system_resource_data = {   
                 "ram_details": {
                     "total_ram_mb": 16384.0,
