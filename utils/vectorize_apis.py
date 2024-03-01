@@ -1,6 +1,6 @@
 import aiohttp
 
-qdrant_api_base_url = "http://192.168.0.58:3000/vector"
+qdrant_api_base_url = "http://192.168.0.129:3000/vector"
 
 async def api_request_handler(**kwargs):
     """
