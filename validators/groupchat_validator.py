@@ -361,9 +361,9 @@ class GroupChatValidator(BaseValidator):
         self.query_res = response
         bt.logging.info("interpreter_response: ", self.query_res)
         self.store_chat_history_locally(self.query_res)
-        affirmation = self.check_affirmation_of_query_response(self.query_res)
+        affirmation = await self.check_affirmation_of_query_response(self.query_res)
         if affirmation:
-            self.calculate_and_set_score_for_tools_response("1006", self.query_res)
+            await self.calculate_and_set_score_for_tools_response("1006", self.query_res)
         # For a while time
         # async with aiohttp.ClientSession() as session:
         #         async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
@@ -379,11 +379,11 @@ class GroupChatValidator(BaseValidator):
     # check affirmation of tool response
     async def check_affirmation_of_query_response(self, response):
         try:
+            bt.logging.info(":::::::::::::::::::Checming affirmation of tool START::::::::::::::::","response: ", response)
             global tool_conversation_score
-            print(":::::::::::::::::::Checming affirmation of tool START::::::::::::::::","response: ", response)
             return random.choices([True, False])
         except Exception as e:
-            print(f"An unexpected error occurred:::::check_affirmation_of_tool::::: {e}")
+            bt.logging.info(f"An unexpected error occurred:::::check_affirmation_of_tool::::: {e}")
     
     async def calculate_score(self):
         return 0.04    
@@ -392,15 +392,14 @@ class GroupChatValidator(BaseValidator):
     async def calculate_and_set_score_for_tools_response(self, tool_id, query):
         try:
             global tool_conversation_score
-            
+            bt.logging.info(":::::::::::::::::::Setting score for tools response::::::::::::::::","tool_id: ", tool_id, "score: ", score)
             score = self.calculate_score(query)
-            print(":::::::::::::::::::Setting score for tools response::::::::::::::::","tool_id: ", tool_id, "score: ", score)
             tool_conversation_score.append({
                 "tool_id": tool_id,
                 "score": score
             })
         except Exception as e:
-            print(f"An unexpected error occurred:::::set_score_for_tools_response::::: {e}")
+            bt.logging.info(f"An unexpected error occurred:::::set_score_for_tools_response::::: {e}")
 
     async def send_query_to_miner(self, data):
         """
