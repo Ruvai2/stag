@@ -117,7 +117,7 @@ class GroupChatValidator(BaseValidator):
         best_route = await semantic_router.SemanticRouter.find_best_route(query, miner_tools_info)
 
         fetch_best_tool_detail = utils.get_object_by_key_value(miner_tools_info,best_route)
-        
+
         print("::::::::::::::::::fetch_best_tool_detail:::::::::::",fetch_best_tool_detail)
         return fetch_best_tool_detail
 
@@ -235,7 +235,7 @@ class GroupChatValidator(BaseValidator):
             # bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
 
             # Return the validator IP and the list of tools to be used
-            return {"agent_id": payload['agent_id'], "description": orchestrator_res[0]}
+            return {"ip": fetch_validator_ip, "description": orchestrator_res[0]}
         except Exception as e:
             bt.logging.error(f"Error in process_tool_selection_request: {e}")
             return {"error": f"An error occurred: {e}"}
