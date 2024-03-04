@@ -8,7 +8,7 @@ async def api_request_handler(**kwargs):
     Request handler for the get query endpoint. This method handles the incoming requests and returns the response from the forward function.
     """
     try:
-        print(f"Request ::::::::::::::::::::::::::::::::;: {kwargs}")
+        print(f"Request {kwargs}")
         async with aiohttp.ClientSession() as session:
             if kwargs['method'] == "GET":
                 async with session.get(kwargs['url']) as response:

@@ -59,20 +59,20 @@ class GroupChatValidator(BaseValidator):
     
     async def check_miner_alive(self, miner_id):
         try:
-            print(":::::::::::::::::::check_tool_alive::::::::::::::::",miner_id)
+            print("check miner alive:",miner_id)
             syn = IsMinerAlive(miner_id = miner_id)
             responses = (await self.query_miner(self.metagraph, miner_id, syn))[0]
-            bt.logging.info(f"Alive Tools: {responses}")
+            bt.logging.info(f"Alive miner: {responses}")
             if responses.status is not None and responses.status['alive']:
                 return True
             else :
                 return False
         except Exception as e:
-            print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
+            print(f"An unexpected error occurred:::::check_miner_alive::::: {e}")
     
     async def check_tool_alive(self, tool, miner_id):
         try:
-            print(":::::::::::::::::::check_tool_alive::::::::::::::::",tool)
+            bt.logging.info(f"check tool alive: {tool}")
             syn = IsToolAlive(tool_id = tool['tool_id'])
             responses = (await self.query_miner(self.metagraph, miner_id, syn))[0]
             bt.logging.info(f"Alive Tools: {responses}")
@@ -84,7 +84,7 @@ class GroupChatValidator(BaseValidator):
             print(f"An unexpected error occurred:::::check_tool_alive::::: {e}")
 
     def get_tool_association_by_id(self, agent_id, tool_associations):
-        bt.logging.info(":::::::::::::::::::get_tool_association_by_id::::::::::::::::")
+        bt.logging.info("get tool association by id")
         """
         Find all objects in tool_associations with the given tool_id.
 
@@ -95,7 +95,7 @@ class GroupChatValidator(BaseValidator):
         Returns:
         - list of dicts: A list of all matching tool association objects.
         """
-        bt.logging.info(f"::::::::::::::tool_associations::::::::: {tool_associations}")
+        bt.logging.info(f"tool associations {tool_associations}")
         matches = [item for item in tool_associations if item.get('agent_id') == agent_id]
         if not matches:
             return {} 
@@ -196,7 +196,7 @@ class GroupChatValidator(BaseValidator):
         """
         try:
             # Log the start of the method and the payload received
-            bt.logging.info(f"::::::::::Starting process_tool_selection_request with payload:::::: {payload}")
+            bt.logging.info(f"Starting process tool selection request with payload {payload}")
 
             tools_to_use = []
 
@@ -215,7 +215,7 @@ class GroupChatValidator(BaseValidator):
             if embedded_text['vectorizedChunks']:
                 chunk = embedded_text['vectorizedChunks'][0]['vector']
                 miner_tools_info = Vector.search_vector_point(DB_COLLECTION, chunk)
-                bt.logging.info(f"::::::::Retrieved miner tools info based on vectorized chunk.::::::::::::{miner_tools_info}")
+                bt.logging.info(f"Retrieved miner tools info based on vectorized chunk.:{miner_tools_info}")
 
             # Add a default description to each tool for demonstration
             for tool in miner_tools_info:
@@ -233,7 +233,7 @@ class GroupChatValidator(BaseValidator):
             # bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
 
             # Return the validator IP and the list of tools to be used
-            return {"tool_list": orchestrator_res}
+            return {"agent_id": payload['agent_id'], "description": orchestrator_res[0]}
         except Exception as e:
             bt.logging.error(f"Error in process_tool_selection_request: {e}")
             return {"error": f"An error occurred: {e}"}
@@ -347,10 +347,10 @@ class GroupChatValidator(BaseValidator):
     
     def store_chat_history_locally(self, query_res):
         try:
-            bt.logging.info("store_chat_history_locally", query_res)
+            # bt.logging.info("store chat history locally", query_res)
             global last_group_chat_query
             user_group_conversation_thread.append({"user": last_group_chat_query, "group": query_res})
-            bt.logging.info(f":::::::: Stored_chat_history_in_local_dictionary :::::::{user_group_conversation_thread}")
+            bt.logging.info(f" Stored_chat_history_in_local_dictionary{user_group_conversation_thread}")
             return None
         except Exception as e:
             bt.logging.error(f"Error::::store_chat_history_locally: {e}")
@@ -358,7 +358,7 @@ class GroupChatValidator(BaseValidator):
 
 
     async def interpreter_response(self, response):
-        bt.logging.info(f"interpreter_response: {response}")
+        # bt.logging.info(f"interpreter_response: {response}")
         self.query_res = response
         # bt.logging.info("interpreter_response: ", self.query_res)
         self.store_chat_history_locally(self.query_res)
@@ -421,7 +421,7 @@ class GroupChatValidator(BaseValidator):
             global last_group_chat_query
             last_group_chat_query = data['problem_statement']
             fetch_tool_detail = self.get_tool_association_by_id(data['agent_id'], global_agent_tool_association)
-            bt.logging.info(f":::::::::Fetched tool details from local dictionary::::: {fetch_tool_detail}")
+            bt.logging.info(f"Fetched tool details from local dictionary {fetch_tool_detail}")
             fetch_tool_detail["miner_id"] = 10
             if 'miner_id' not in fetch_tool_detail or 'tool_id' not in fetch_tool_detail:
                 raise ValueError("Missing 'miner_id' or 'tool_id' in fetched tool details.")
@@ -463,11 +463,11 @@ class GroupChatValidator(BaseValidator):
             self (:obj:`bittensor.neuron.Neuron`): The neuron object which contains all the necessary state for the validator.
 
         """
-        bt.logging.info(f"::::::::::::::Synapse_for_actual_query_to_miner:::::::::::::::::: {syn}")
+        bt.logging.info(f"Synapse for actual query to miner {syn}")
         try:
             responses = await self.query_miner(self.metagraph, miner_id, syn)
             res_string  = responses[0]
-            bt.logging.info(":::::::::::::::miner_response_to validator:::::::::::::::::", res_string)
+            bt.logging.info("miner response to validator", res_string)
             # if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
             #     self.query_res = res_string.output
             #     await self.send_res_to_group_chat()
@@ -565,23 +565,22 @@ class GroupChatValidator(BaseValidator):
         
     async def run_tool(self, data):
         try:
-            bt.logging.info("::::::::::::: Run Tool Start : ::::::::::::")
             tool_id = (self.find_tool_id_by_agent_id(data['agent_id']))['tool_id']
+            bt.logging.info(f"Run Tool Start: {tool_id}")
             # get the tool benchmark details using tool_id
-            bt.logging.info("::::::::::::: Getting benchmark details : ::::::::::::")
             tool_benchmark_deatils = { "cup": 1, "gpu": None, "ram": 1024,}
-            bt.logging.info(f"Tool ID: {tool_id}")
+            bt.logging.info(f"Getting benchmark details {tool_benchmark_deatils}")
+            # bt.logging.info(f"Tool ID: {tool_id}")
             miner_id, status, message = self.find_miner_and_check_resources(tool_benchmark_deatils)
             bt.logging.info(f"Status: {status}, Message: {message}, Miner ID: {miner_id}")
             if status:
                 tool = (await vectorize_apis.get_tool_from_vector_db(collection_name=DB_COLLECTION, tool_id=tool_id))['payload']
                 bt.logging.info(f"Tool Details: {type(tool)} {tool}")
                 syn = RunToolRequest(tool_id=tool['tool_id'], run_commands=tool['runCommands'], docker_file=tool['dockerFile'])
-                bt.logging.info("::::::::::::: Sending syn to miner to run command : ::::::::::::")
+                bt.logging.info("Sending syn to miner to run command :")
                 response = (await self.query_miner(self.metagraph, miner_id, syn))[0]
                 if response.success:
-                    print("::::::::::::: response.success: ::::::::::::", response)
-                    print("::::::::::::: response.tool: ::::::::::::", response)
+                    bt.logging.info(f"response.tool{response}")
                     alive_tool = await self.check_tool_alive(tool, miner_id)
                     if alive_tool:
                         self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
@@ -598,7 +597,7 @@ class GroupChatValidator(BaseValidator):
         
     async def stop_tool(self, data):
         try:
-            bt.logging.info("::::::::::::: Stop Tool Start : ::::::::::::")
+            bt.logging.info("Stop Tool Start : ")
             global global_miner_details
             local_data = self.find_tool_id_by_agent_id(data['agent_id'])
             syn = DeleteToolRequest(tool_id=local_data['tool_id'])
@@ -623,7 +622,7 @@ class GroupChatValidator(BaseValidator):
             syn = MinerInfo(miner_id=data['miner_id'])
             bt.logging.info(f"Received get_miner_tool_list request. {syn}, miner_id: {data['miner_id']}")
             miner_details = (await self.query_miner(self.metagraph, data['miner_id'], syn))[0]
-            bt.logging.info(f"Miner List: {miner_details}")
+            # bt.logging.info(f"Miner List: {miner_details}")
             return miner_details.system_resource_data
         except Exception as e:
             bt.logging.error(f"Error in request_for_miner_resources: {e}")
