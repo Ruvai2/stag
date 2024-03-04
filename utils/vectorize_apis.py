@@ -1,5 +1,5 @@
 import aiohttp
-from validators.vector_api.vector import Vector
+from vector_api.vector import Vector
 
 qdrant_api_base_url = "http://192.168.0.129:3000/vector"
 
