@@ -3,7 +3,7 @@ from semantic_router.layer import RouteLayer
 import os
 import bittensor as bt
 
-os.environ["OPENAI_API_KEY"] = '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'
+os.environ["OPENAI_API_KEY"] = os.environ.get("OPENAI_API_KEY")
 class SemanticRouter:
     def __init__(self):
         pass
@@ -20,7 +20,7 @@ class SemanticRouter:
             routes = [SemanticRouter.create_route(route['id'], route['payload']['conversationStarters']) for route in dynamic_routes]
             router_layer = RouteLayer(routes=routes)
         
-            best_route = await router_layer(problem_statement)  # This line is hypothetical and assumes router_layer supports async
+            best_route = router_layer(problem_statement)  # This line is hypothetical and assumes router_layer supports async
             print(f"best route for problem statement: {best_route}")
             
             return {"id": best_route.name}

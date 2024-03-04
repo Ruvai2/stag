@@ -586,9 +586,9 @@ class GroupChatValidator(BaseValidator):
                     alive_tool = await self.check_tool_alive(tool, miner_id)
                     if alive_tool:
                         self.insert_miner_id_into_global_agent_tool_association(data['agent_id'], miner_id)
-                        return {"message": "Tool is running!"}
+                        return {"message": "Tool is running!", "status": True}
                     else:
-                        return {"message": "Tool is not running!"}
+                        return {"message": "Tool is not running!", "status": False}
             else: 
                 return None
         except Exception as e:
