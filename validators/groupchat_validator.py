@@ -101,23 +101,35 @@ class GroupChatValidator(BaseValidator):
             return {} 
         return matches[0]
 
-    async def get_res_from_open_ai(self, query, miner_tools_info):
-        # bt.logging.info(":::::::::::get_res_from_open_ai::::::::::::")
-        return miner_tools_info[0]
-        bt.logging.info("::::::::::::Finalizing Tools: The Basis of Problem Statement::::::::")
+    async def get_best_tool_selection(self, query, miner_tools_info):
+        # bt.logging.info(":::::::::::get_best_tool_selection::::::::::::")
+        # return miner_tools_info[0]
+        """_summary_
 
-        prompt_lines = [
-            'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data with only one item nothing else.\n Tools available:'
-        ]
-        prompt_lines[0] = prompt_lines[0].format(query)
-        for tool in miner_tools_info:
-            description = tool.get('description', 'No description available.')
-            tool_info = f"- Tool ID: {tool['id']}, Description: {description}"
-            prompt_lines.append(tool_info)
-        prompt = '\n'.join(prompt_lines)
-        openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
-        bt.logging.info(f"::::Recommended Tool IDs:::: {openai_res}")
-        return openai_res
+        Args:
+            query (str): user query
+            miner_tools_info (list): tool details
+
+        Returns:
+            _type_: _description_
+        """
+        bt.logging.info("::::::::::::Finalizing Tools: The Basis of Problem Statement::::::::")
+        # need to choose best tool with the help of semmentic routing
+        
+        
+        # prompt_lines = [
+        #     'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data with only one item nothing else.\n Tools available:'
+        # ]
+        # prompt_lines[0] = prompt_lines[0].format(query)
+        # for tool in miner_tools_info:
+        #     description = tool.get('description', 'No description available.')
+        #     tool_info = f"- Tool ID: {tool['id']}, Description: {description}"
+        #     prompt_lines.append(tool_info)
+        # prompt = '\n'.join(prompt_lines)
+        # openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
+        # bt.logging.info(f"::::Recommended Tool IDs:::: {openai_res}")
+        # return openai_res
+        return miner_tools_info[0]
 
         
     async def request_for_miner(self, payload: dict):
@@ -222,7 +234,7 @@ class GroupChatValidator(BaseValidator):
                 tool['description'] = "I'm a python developer and I can easily write a code in python whatever you gave to me"
 
             # Retrieve recommendations from OpenAI based on the problem statement and tools info
-            # res = await self.get_res_from_open_ai(payload['problem_statement'], miner_tools_info)
+            res = await self.get_best_tool_selection(payload['problem_statement'], miner_tools_info)
 
             # Create global agent tool association based on the recommendations
             orchestrator_res = await self.create_global_agent_tool_association(miner_tools_info, payload['agent_id'])
