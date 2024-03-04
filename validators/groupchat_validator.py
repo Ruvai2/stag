@@ -2,7 +2,7 @@ import bittensor as bt
 import random
 from base_validator import BaseValidator
 from app_config import config
-from utils import vectorize_apis,utils
+from utils import vectorize_apis,utils,semantic_router
 from template.protocol import IsToolAlive, StreamPrompting, Dummy, GetToolList, InterpreterRequests,MinerInfo, RunToolRequest, DeleteToolRequest, IsMinerAlive
 from template.utils import call_openai,get_response_from_openai,fetch_ip
 import asyncio
@@ -113,23 +113,13 @@ class GroupChatValidator(BaseValidator):
         Returns:
             _type_: _description_
         """
-        bt.logging.info("::::::::::::Finalizing Tools: The Basis of Problem Statement::::::::")
-        # need to choose best tool with the help of semmentic routing
+        bt.logging.info("::::::::::::miner_tools_info::::::::",miner_tools_info)
+        best_route = await semantic_router.SemanticRouter.find_best_route(query, miner_tools_info)
+
+        fetch_best_tool_detail = utils.get_object_by_key_value(miner_tools_info,best_route)
         
-        
-        # prompt_lines = [
-        #     'Query: {} Based on the descriptions below, which tools (by Tool ID) are capable of addressing the query? Provide the response as an array of "tool_id" and "description" in array of object and you have to send me array data with only one item nothing else.\n Tools available:'
-        # ]
-        # prompt_lines[0] = prompt_lines[0].format(query)
-        # for tool in miner_tools_info:
-        #     description = tool.get('description', 'No description available.')
-        #     tool_info = f"- Tool ID: {tool['id']}, Description: {description}"
-        #     prompt_lines.append(tool_info)
-        # prompt = '\n'.join(prompt_lines)
-        # openai_res = await get_response_from_openai(prompt, 0.65, "gpt-4")
-        # bt.logging.info(f"::::Recommended Tool IDs:::: {openai_res}")
-        # return openai_res
-        return miner_tools_info[0]
+        print("::::::::::::::::::fetch_best_tool_detail:::::::::::",fetch_best_tool_detail)
+        return fetch_best_tool_detail
 
         
     async def request_for_miner(self, payload: dict):
