@@ -1,5 +1,5 @@
 
-from vector_api.db import db_client
+from  validators.vector_api.db import db_client
 
 class Vector:
     @staticmethod
