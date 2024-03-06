@@ -179,10 +179,11 @@ class GroupChatValidator(BaseValidator):
                 # "tool_id": item['tool_id'],
                 "tool_id": 1001,
                 "description": item['description'],
+                "conversation_starters": item['payload']['conversationStarters'],
                 "run_command":"DOCKER_CMD_TO_START",
                 "docker_file":"config/docker-compose.yaml",
             })
-            generate_res_for_orchestrator.append(item.get('description'))
+            generate_res_for_orchestrator.append({"description":item.get('description'), "conversation_starters": item['payload']['conversationStarters']})
         return generate_res_for_orchestrator
 
     async def process_tool_selection_request(self, payload: dict):
@@ -235,7 +236,7 @@ class GroupChatValidator(BaseValidator):
             # bt.logging.info(f"Retrieved validator IP: {fetch_validator_ip}")
 
             # Return the validator IP and the list of tools to be used
-            return {"ip": fetch_validator_ip, "description": orchestrator_res[0]}
+            return {"ip": fetch_validator_ip, "description": orchestrator_res[0]['description'], "conversation_starters": orchestrator_res[0]['conversation_starters']}
         except Exception as e:
             bt.logging.error(f"Error in process_tool_selection_request: {e}")
             return {"error": f"An error occurred: {e}"}
