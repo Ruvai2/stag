@@ -367,17 +367,8 @@ class GroupChatValidator(BaseValidator):
         affirmation = await self.check_affirmation_of_query_response(self.query_res)
         if affirmation:
             await self.calculate_and_set_score_for_tools_response("1006", self.query_res)
-        # For a while time
-        # async with aiohttp.ClientSession() as session:
-        #         async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
-        #             if response.status == 200:
-        #                 bt.logging.info("Successfully called the group chat:::::")
-        #             else:
-        #                 print(f"Error: {response.status}, {await response.text()}")
-        #                 bt.logging.error("Failed to call the group chat:::::")
+        query_response = await self.send_res_to_group_chat(self)
         return "Successfully called the group chat:::::"
-        # query_response = await self.send_res_to_group_chat()
-        # return query_response
         
     # check affirmation of tool response
     async def check_affirmation_of_query_response(self, response):
