@@ -368,7 +368,7 @@ class GroupChatValidator(BaseValidator):
         if affirmation:
             await self.calculate_and_set_score_for_tools_response("1006", self.query_res)
         query_response = await self.send_res_to_group_chat(self)
-        return "Successfully called the group chat:::::"
+        return query_response
         
     # check affirmation of tool response
     async def check_affirmation_of_query_response(self, response):
@@ -461,12 +461,12 @@ class GroupChatValidator(BaseValidator):
             responses = await self.query_miner(self.metagraph, miner_id, syn)
             res_string  = responses[0]
             bt.logging.info("miner response to validator", res_string)
-            # if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
-            #     self.query_res = res_string.output
-            #     await self.send_res_to_group_chat()
-            #     return
-            # else:
-            return responses
+            if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
+                self.query_res = res_string.output
+                await self.send_res_to_group_chat()
+                return
+            else:
+                return responses
         except Exception as e:
             bt.logging.error(f":::::Error while sending dendrite::::::: {e}")
             
