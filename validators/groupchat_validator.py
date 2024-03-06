@@ -17,7 +17,7 @@ from config.config import *
 
 # miner_group_association = {}
 # global_miner_details = []
-global_agent_tool_association = []
+global_agent_tool_association = [] # [{"agent_id": 1, "tool_id": 1001, miner_id: 16}]
 last_group_chat_query = None
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
 tool_conversation_score = [] # [{"tool_id": 1001, "weight": 0.5}]
@@ -505,32 +505,24 @@ class GroupChatValidator(BaseValidator):
             bt.logging.error(f":::::Error while sending dendrite::::::: {e}")
             
     
-    async def remove_agent_from_global_object(self, all_agents_detail, group_id, agent_id):
+    async def remove_agent_from_global_object(self, all_agents_detail, agent_id):
         try:
             removed_objects = []
-            if group_id in all_agents_detail:
-                group_data = all_agents_detail[group_id]
-                new_group_data = []
-                for obj in group_data:
-                    if obj['agent_id'] == agent_id:
-                        removed_objects.append(obj)
-                    else:
-                        new_group_data.append(obj)
-                all_agents_detail[group_id] = new_group_data
-            else:
-                return {"message": f"{agent_id} not found in this {group_id} group!"}
-            return all_agents_detail
+            for obj in all_agents_detail:
+                if obj['agent_id'] != agent_id:
+                    removed_objects.append(obj)
+            return removed_objects
         except Exception as e:
             print("Error in remove_agent_from_global_object: ", e)
 
     async def remove_agent(self, data):
         try:
-            global miner_group_association
+            global global_agent_tool_association
             all_agents_detail = self.remove_agent_from_global_object(
-                miner_group_association, data['group_id'], data['agent_id'])
-            miner_group_association = all_agents_detail
+                global_agent_tool_association, data['agent_id'])
+            global_agent_tool_association = all_agents_detail
 
-            bt.logging.info(f"miner_group_association::::: {miner_group_association}")
+            bt.logging.info(f"global_agent_tool_association::::: {global_agent_tool_association}")
             return {"message": "Agent removed!"}
         except Exception as e:
             bt.logging.info(f"error in remove_agent::::: {e}")
@@ -639,10 +631,10 @@ class GroupChatValidator(BaseValidator):
             await self.set_weights_and_give_score()
             
             bt.logging.info("Sending the information return back to the orchestrator")
-            return {"message": "Tool Stoped!", "conversation": user_group_conversation_thread}
+            return {"message": "Tool Stoped!", "conversation_histroy": user_group_conversation_thread, "status": True}
         except Exception as e:
             print("Error in stop_tool: ", e)
-            return {"message": "Tool not deleted!"}
+            return {"message": "Tool not deleted!", "status": False}
         
     async def request_for_miner_resources(self, data):
         try:
