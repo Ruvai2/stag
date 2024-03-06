@@ -224,7 +224,7 @@ class GroupChatValidator(BaseValidator):
                 tool['description'] = "I'm a python developer and I can easily write a code in python whatever you gave to me"
 
             # Retrieve recommendations from OpenAI based on the problem statement and tools info
-            res = await self.get_best_tool_selection(payload['problem_statement'], miner_tools_info)
+            # res = await self.get_best_tool_selection(payload['problem_statement'], miner_tools_info)
 
             # Create global agent tool association based on the recommendations
             orchestrator_res = await self.create_global_agent_tool_association(miner_tools_info, payload['agent_id'])
