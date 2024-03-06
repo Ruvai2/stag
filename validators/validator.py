@@ -167,9 +167,8 @@ async def forward_query_request(request: web.Request):
         return web.Response(status=400, text="Bad request format")
     
     try:
-        res = await group_chat_vali.send_query_to_miner(data)
-        temp_res = {"message":"Success"}
-        return web.json_response(temp_res)
+        await group_chat_vali.send_query_to_miner(data)
+        return web.json_response({"message":"query send to validator and validator is processing it!"})
     except Exception as e:
         bt.logging.error(f'Encountered in {forward_query_request.__name__}:\n{traceback.format_exc()}')
         return web.Response(status=500, text="Internal error")

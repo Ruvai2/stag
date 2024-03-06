@@ -10,7 +10,6 @@ import torch
 import random
 import template
 import aiohttp
-import asyncio
 from utils import utils
 import json
 from vector_api.vector import Vector
@@ -368,7 +367,8 @@ class GroupChatValidator(BaseValidator):
         affirmation = await self.check_affirmation_of_query_response(self.query_res)
         if affirmation:
             await self.calculate_and_set_score_for_tools_response("1006", self.query_res)
-        query_response = await self.send_res_to_group_chat(self)
+        print("::::sending response to group chat by web hook::::")
+        query_response = await self.send_res_to_group_chat()
         return query_response
         
     # check affirmation of tool response
@@ -422,8 +422,9 @@ class GroupChatValidator(BaseValidator):
 
             syn = InterpreterRequests(query=data['problem_statement'], miner_id=int(fetch_tool_detail['miner_id']), tool_id=fetch_tool_detail['tool_id'])
 
-            response = await self.forward(syn, fetch_tool_detail['miner_id'])
-            return response
+            self.temp_forward(syn, fetch_tool_detail['miner_id'])
+            print(":returning back::::::::::::::::::")
+            return None
         except Exception as e:
             # Handle any exceptions that occur during the process
             bt.logging.error(f"Error handling group chat query: {e}")
@@ -432,17 +433,21 @@ class GroupChatValidator(BaseValidator):
     
     async def send_res_to_group_chat(self):
         try:
-            while self.query_res["key"] == "INTERPRETER_PROCESSING":
-                # Wait until the key becomes "INTEPRETR_PROGESS"
-                bt.logging.info("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
-                await asyncio.sleep(10)
+            bt.logging.info("sending res to group chat using web hook:")
+            
+            # while self.query_res["key"] == "INTERPRETER_PROCESSING":
+            #     # Wait until the key becomes "INTEPRETR_PROGESS"
+            #     bt.logging.info("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
+            await asyncio.sleep(10)
             async with aiohttp.ClientSession() as session:
-                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res["key"]}) as response:
+                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": "Hello"}) as response:
+                    print("::::::response::::::::::",response)
                     if response.status == 200:
                         bt.logging.info("Successfully called the group chat:::::")
                     else:
                         print(f"Error: {response.status}, {await response.text()}")
                         bt.logging.error("Failed to call the group chat:::::")
+            print("Currently in send_res_to_group_chat")
             return "Successfully called the group chat:::::"
         except Exception as e:
             bt.logging.error(f":::::Error send_res_to_group_chat::::::: {e}")
@@ -459,15 +464,43 @@ class GroupChatValidator(BaseValidator):
         """
         bt.logging.info(f"Synapse for actual query to miner {syn}")
         try:
-            responses = await self.query_miner(self.metagraph, miner_id, syn)
-            res_string  = responses[0]
-            bt.logging.info("miner response to validator", res_string)
-            if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
-                self.query_res = res_string.output
-                await self.send_res_to_group_chat()
-                return
-            else:
-                return responses
+            response = await self.query_miner(self.metagraph, miner_id, syn)
+            # res_string  = responses[0]
+            bt.logging.info("miner response to validator")
+            # if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
+            #     print(":INSIDE THE INTERPRETER_PROCESSING")
+            #     self.query_res = res_string.output
+            #     print("::::res_string.output::::",res_string.output)
+            #     await self.send_res_to_group_chat()
+            #     return
+            # else:
+            return None
+        except Exception as e:
+            bt.logging.error(f":::::Error while sending dendrite::::::: {e}")
+    def temp_forward(self, syn: InterpreterRequests, miner_id: int):
+        """
+        The forward function is called by the validator every time step.
+
+        It is responsible for querying the network and scoring the responses.
+
+        Args:
+            self (:obj:`bittensor.neuron.Neuron`): The neuron object which contains all the necessary state for the validator.
+
+        """
+        bt.logging.info(f"Synapse for actual query to miner {syn}")
+        try:
+            asyncio.ensure_future(self.query_miner(self.metagraph, miner_id, syn))
+            
+            # res_string  = responses[0]
+            bt.logging.info("miner response to validator")
+            # if len(res_string.output.keys()) and res_string.output['key'] == 'INTERPRETER_PROCESSING':
+            #     print(":INSIDE THE INTERPRETER_PROCESSING")
+            #     self.query_res = res_string.output
+            #     print("::::res_string.output::::",res_string.output)
+            #     await self.send_res_to_group_chat()
+            #     return
+            # else:
+            return None
         except Exception as e:
             bt.logging.error(f":::::Error while sending dendrite::::::: {e}")
             

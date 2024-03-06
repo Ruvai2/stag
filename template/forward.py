@@ -68,13 +68,13 @@ async def forward(self):
             synapse=InterpreterRequests(query=self.query),
             deserialize=True,
         )
-        res_string  = responses[0]
-        if res_string and 'key' in res_string and res_string['key'] == 'INTERPRETER_PROCESSING':
-            self.query_res = res_string
-            await send_res_to_group_chat(self)
-            return
-        else:
-            return responses
+        # res_string  = responses[0]
+        # if res_string and 'key' in res_string and res_string['key'] == 'INTERPRETER_PROCESSING':
+        #     self.query_res = res_string
+        #     await send_res_to_group_chat(self)
+        #     return
+        # else:
+        return responses
     except Exception as e:
         print(":::::Error while sending dendrite:::::::",e)
     # print(":::::::::::responses:::::::::",responses)
