@@ -438,9 +438,9 @@ class GroupChatValidator(BaseValidator):
             # while self.query_res["key"] == "INTERPRETER_PROCESSING":
             #     # Wait until the key becomes "INTEPRETR_PROGESS"
             #     bt.logging.info("::::::::WAITING_FOR_INTERPRETER_RESPONSE::::::::::")
-            await asyncio.sleep(10)
+            # await asyncio.sleep(10)
             async with aiohttp.ClientSession() as session:
-                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": "Hello"}) as response:
+                async with session.post("http://localhost:3000/api/send_update_after_processing", headers={"Content-Type": "application/json"}, json={"key": self.query_res}) as response:
                     print("::::::response::::::::::",response)
                     if response.status == 200:
                         bt.logging.info("Successfully called the group chat:::::")
