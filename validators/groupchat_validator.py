@@ -22,8 +22,8 @@ last_group_chat_query = None
 user_group_conversation_thread = [] # [{user, group}, {user, group}]
 tool_conversation_score = [] # [{"tool_id": 1001, "weight": 0.5}]
 global_miner_details = {
-    10: {   
-        "ram_details": {
+    20: {   
+        "ram_details": { 
             "total_ram_mb": 16384.0,
             "available_ram_mb": 2780.812,
             "utilized_ram_percent": 83.0
@@ -416,7 +416,7 @@ class GroupChatValidator(BaseValidator):
             last_group_chat_query = data['problem_statement']
             fetch_tool_detail = self.get_tool_association_by_id(data['agent_id'], global_agent_tool_association)
             bt.logging.info(f"Fetched tool details from local dictionary {fetch_tool_detail}")
-            fetch_tool_detail["miner_id"] = 10
+            fetch_tool_detail["miner_id"] = 20
             if 'miner_id' not in fetch_tool_detail or 'tool_id' not in fetch_tool_detail:
                 raise ValueError("Missing 'miner_id' or 'tool_id' in fetched tool details.")
 

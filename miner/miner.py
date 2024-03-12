@@ -633,7 +633,7 @@ class StreamingTemplateMiner(StreamMiner):
                 "model": "gpt-4",
                 'messages': [{
                     'role': 'system',
-                            'content': "You are a powerfull tools, you have to provide accurate and concise answers to the user's queries"
+                            'content': "You are a powerfull tools, you have to provide accurate and concise answers to the user's queries and if found a query is already resolved or response then just send 'COMPLETED' "
                 }, {
                     'role': 'user',
                             'content': data
