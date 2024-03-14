@@ -3,7 +3,7 @@
 
 
 # QdrantDB config
-DB_HOST = "localhost"
+DB_HOST = "34.228.165.192"
 DB_PORT = 6333
 
 
